@@ -1,0 +1,103 @@
+/*
+ * Copyright 2026 Bad Monkey, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package ai.badmonkey.agentspaces.examples.springai.patterns;
+
+import ai.badmonkey.agentspaces.agent.annotation.AgentSpec;
+import ai.badmonkey.agentspaces.agent.annotation.Ballot;
+import ai.badmonkey.agentspaces.agent.annotation.OnDecision;
+import ai.badmonkey.agentspaces.capabilities.vote.VoteCapability;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.evaluation.EvaluationRequest;
+import org.springframework.ai.evaluation.Evaluator;
+
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Pattern: a panel of model judges. Each judge is an ordinary {@code @Ballot}
+ * agent whose vote comes from a Spring AI {@link Evaluator} (a
+ * {@code FactCheckingEvaluator} over the judge's own model) checking a claim
+ * against its evidence; the lead's {@code @OnDecision} method records the
+ * verdict once the quorum closes. Every ballot is a signed entry, so the panel's
+ * reasoning is auditable from the space: which judge, on which peer, voted how.
+ */
+public final class JudgePanel {
+
+    /** Separates a proposal's claim from its evidence in the question text. */
+    public static final String EVIDENCE = "\n---\n";
+
+    /** The recorded verdict. */
+    public record Verdict(String proposalId, String winner, String tally) {
+    }
+
+    /** A judge: fact-checks the claim with its evaluator and votes. */
+    @AgentSpec(name = "judge", description = "Fact-checks claims against evidence", goals = {"judge claims"})
+    public static final class Judge {
+        private final Evaluator evaluator;
+
+        /**
+         * Creates a judge.
+         *
+         * @param evaluator the judge's evaluator
+         */
+        public Judge(Evaluator evaluator) {
+            this.evaluator = Objects.requireNonNull(evaluator, "evaluator");
+        }
+
+        /**
+         * Votes on one claim.
+         *
+         * @param proposal the claim, with its evidence after {@link #EVIDENCE}
+         * @return approve or reject
+         */
+        @Ballot(space = "votes", prefix = "claim:", lease = "10m")
+        public String judge(VoteCapability.Proposal proposal) {
+            String[] parts = proposal.question().split(EVIDENCE, 2);
+            boolean holds = evaluator.evaluate(new EvaluationRequest(
+                    List.of(new Document(parts.length > 1 ? parts[1] : "")), parts[0])).isPass();
+            return holds ? "approve" : "reject";
+        }
+    }
+
+    /** The lead: records each closed claim. */
+    @AgentSpec(name = "lead", description = "Records the panel's verdicts", goals = {"record verdicts"})
+    public static final class Lead {
+        /**
+         * Records a decision.
+         *
+         * @param decision the closed vote
+         * @return the verdict entry
+         */
+        @OnDecision(space = "votes", prefix = "claim:", resultLease = "1h")
+        public Verdict record(VoteCapability.Decision decision) {
+            return new Verdict(decision.proposalId(), decision.winner(), decision.tally().toString());
+        }
+    }
+
+    /**
+     * The proposal question for a claim and its evidence.
+     *
+     * @param claim    the claim
+     * @param evidence the evidence
+     * @return the question text
+     */
+    public static String question(String claim, String evidence) {
+        return claim + EVIDENCE + evidence;
+    }
+
+    private JudgePanel() {
+    }
+}

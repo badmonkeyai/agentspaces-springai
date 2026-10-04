@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2026 Bad Monkey, Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+         child.project.url.inherit.append.path="false">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>ai.badmonkey.agentspaces</groupId>
+  <artifactId>agentspaces-springai-parent</artifactId>
+  <version>0.2.0</version>
+  <packaging>pom</packaging>
+  <name>AgentSpaces Spring AI :: Parent</name>
+  <description>
+    AgentSpaces for Spring AI applications: the fleet's AgentCards as Spring AI
+    tools, crash-safe LLM workers, model access as a fleet service, real
+    embeddings for semantic discovery, fleet-wide token usage, and MCP export.
+    A standalone project on the published AgentSpaces libraries, written in
+    Spring's program-by-interface and dependency-injection style.
+  </description>
+
+  <!-- Modules inherit these verbatim: without the attributes Maven appends each module's
+       artifactId to the URL and SCM paths, producing links that do not exist. -->
+  <url>https://github.com/badmonkeyai/agentspaces-springai</url>
+  <inceptionYear>2026</inceptionYear>
+
+  <organization>
+    <name>Bad Monkey, Inc.</name>
+    <url>https://badmonkey.ai</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>albaker</id>
+      <name>Al Baker</name>
+      <email>ajb732@gmail.com</email>
+      <organization>Bad Monkey, Inc.</organization>
+      <organizationUrl>https://badmonkey.ai</organizationUrl>
+      <roles>
+        <role>architect</role>
+        <role>developer</role>
+      </roles>
+    </developer>
+  </developers>
+
+  <scm child.scm.connection.inherit.append.path="false"
+       child.scm.developerConnection.inherit.append.path="false"
+       child.scm.url.inherit.append.path="false">
+    <url>https://github.com/badmonkeyai/agentspaces-springai</url>
+    <connection>scm:git:https://github.com/badmonkeyai/agentspaces-springai.git</connection>
+    <developerConnection>scm:git:git@github.com:badmonkeyai/agentspaces-springai.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/badmonkeyai/agentspaces-springai/issues</url>
+  </issueManagement>
+
+  <properties>
+    <java.version>21</java.version>
+    <maven.compiler.release>${java.version}</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <agentspaces.version>0.2.0</agentspaces.version>
+    <spring-boot.version>4.1.1</spring-boot.version>
+    <spring-ai.version>2.0.1</spring-ai.version>
+    <!-- Jackson above the Boot/Spring AI managed versions; drop once they catch up. -->
+    <jackson.version>2.21.7</jackson.version>
+    <jackson3.version>3.1.7</jackson3.version>
+
+    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+    <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+    <maven-install-plugin.version>3.1.3</maven-install-plugin.version>
+    <maven-clean-plugin.version>3.4.0</maven-clean-plugin.version>
+    <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
+    <!-- Publication (the central-publish profile), the versions the core repository uses. -->
+    <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+    <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
+    <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+    <central-publishing-maven-plugin.version>0.9.0</central-publishing-maven-plugin.version>
+  </properties>
+
+  <!-- The library alone by default; the example applications build under
+       -Pexamples (CI and the workspace gate turn it on, so they stay green). -->
+  <modules>
+    <module>core</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Jackson ahead of every other BOM so these win: Spring Boot 4.1.1 and
+           Spring AI 2.0.1 manage Jackson 2.21.5 and 3.1.5, both with open
+           advisories fixed in 2.21.7 and 3.1.7 (the core repository's versions). -->
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>tools.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson3.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Spring Boot next: an application's Boot version governs the Spring line. -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-bom</artifactId>
+        <version>${spring-ai.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>ai.badmonkey.agentspaces</groupId>
+        <artifactId>agentspaces-dependencies</artifactId>
+        <version>${agentspaces.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>ai.badmonkey.agentspaces</groupId>
+        <artifactId>agentspaces-springai</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+          <configuration>
+            <release>${java.version}</release>
+            <!-- Constructor binding and @Tool parameter names read these. -->
+            <parameters>true</parameters>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>${maven-resources-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>${maven-install-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>${maven-clean-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>${exec-maven-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${spring-boot.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <!-- The example applications: example 15 (springai-fleet) and the
+         patterns. Development and documentation, not a deliverable: off by
+         default, on in CI and verify-all.sh, so they stay green with the
+         library. Never installed or deployed. -->
+    <profile>
+      <id>examples</id>
+      <modules>
+        <module>examples/springai-fleet</module>
+        <module>examples/springai-patterns</module>
+      </modules>
+    </profile>
+    <!-- Maven Central publication: source and javadoc jars for every
+         deployed module, GPG signing, and upload
+         through the Sonatype Central Portal (the same shape as Embabel's
+         sonatype profile). Kept behind a profile so the default reactor builds
+         identically in network-restricted environments; CI activates it for
+         releases with -Pcentral-publish.
+
+         The example applications are outside the default reactor (the
+         examples profile), so a release builds the library and parent alone;
+         their POMs also set maven.deploy.skip + skipPublishing, so they never
+         reach Central even when the profile is on.
+
+         Credentials: the `central` server id in settings.xml carries the
+         Central Portal token; the GPG passphrase arrives via the
+         MAVEN_GPG_PASSPHRASE environment variable. -->
+    <profile>
+      <id>central-publish</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>${maven-source-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <attach>true</attach>
+              <excludeResources>false</excludeResources>
+              <includePom>false</includePom>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${maven-javadoc-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <quiet>true</quiet>
+              <doclint>all,-missing</doclint>
+              <release>${java.version}</release>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven-gpg-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <!-- Passphrase consumed from the MAVEN_GPG_PASSPHRASE environment
+                   variable; bestPractices fails the build on legacy insecure
+                   passphrase sources. -->
+              <bestPractices>true</bestPractices>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>${central-publishing-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>false</autoPublish>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
