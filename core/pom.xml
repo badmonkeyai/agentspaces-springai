@@ -61,6 +61,13 @@
       <artifactId>micrometer-observation</artifactId>
     </dependency>
 
+    <!-- The wire records (the standalone agentspaces-model-wire project), shared with
+         the Micronaut LangChain4j bridge. -->
+    <dependency>
+      <groupId>ai.badmonkey.agentspaces</groupId>
+      <artifactId>agentspaces-model-wire</artifactId>
+    </dependency>
+
     <!-- The fabric, through the starter and the libraries it wires. -->
     <dependency>
       <groupId>ai.badmonkey.agentspaces</groupId>

@@ -55,7 +55,7 @@
     <developer>
       <id>albaker</id>
       <name>Al Baker</name>
-      <email>ajb732@gmail.com</email>
+      <email>al@badmonkey.ai</email>
       <organization>Bad Monkey, Inc.</organization>
       <organizationUrl>https://badmonkey.ai</organizationUrl>
       <roles>
@@ -152,6 +152,13 @@
         <version>${agentspaces.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- The model-service wire records: a standalone project (agentspaces-model-wire),
+           shared with agentspaces-micronaut, resolved from the repository. -->
+      <dependency>
+        <groupId>ai.badmonkey.agentspaces</groupId>
+        <artifactId>agentspaces-model-wire</artifactId>
+        <version>${agentspaces.version}</version>
       </dependency>
       <dependency>
         <groupId>ai.badmonkey.agentspaces</groupId>
