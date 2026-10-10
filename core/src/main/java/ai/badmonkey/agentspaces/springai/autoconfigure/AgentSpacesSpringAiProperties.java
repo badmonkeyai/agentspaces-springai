@@ -32,6 +32,7 @@ import java.util.Map;
  *                       group under {@code agentspaces.groups}
  * @param tools          F1, fleet tools
  * @param discoveryTools F2, discovery and data tools
+ * @param capabilityTools F9, vote and aggregate tools
  * @param takeLease      F3, the take-lease advisor
  * @param memory         F3, space-backed chat memory
  * @param modelClient    F4, the calling side of model access
@@ -46,6 +47,7 @@ public record AgentSpacesSpringAiProperties(
         @DefaultValue("") String group,
         @DefaultValue Tools tools,
         @DefaultValue DiscoveryTools discoveryTools,
+        @DefaultValue CapabilityTools capabilityTools,
         @DefaultValue TakeLease takeLease,
         @DefaultValue Memory memory,
         @DefaultValue ModelClient modelClient,
@@ -58,7 +60,7 @@ public record AgentSpacesSpringAiProperties(
     /** The defaults, for code that builds components without a Spring context. */
     public static AgentSpacesSpringAiProperties defaults() {
         return new AgentSpacesSpringAiProperties("", Tools.defaults(), DiscoveryTools.defaults(),
-                TakeLease.defaults(), Memory.defaults(), ModelClient.defaults(),
+                CapabilityTools.defaults(), TakeLease.defaults(), Memory.defaults(), ModelClient.defaults(),
                 ModelServer.defaults(), Embedder.defaults(), Usage.defaults(), Mcp.defaults(),
                 VectorStore.defaults());
     }
@@ -145,6 +147,38 @@ public record AgentSpacesSpringAiProperties(
 
         static DiscoveryTools defaults() {
             return new DiscoveryTools(false, false, false, "data", Duration.ofSeconds(10), 20_000);
+        }
+    }
+
+    /**
+     * F9: tools that let a model take part in the fleet's capabilities. Each
+     * family is enabled separately.
+     *
+     * @param vote          register {@code propose_vote}, {@code cast_ballot},
+     *                      {@code read_tally}, and {@code read_decision}
+     * @param aggregate     register {@code contribute} and {@code read_estimate}
+     * @param ballotLease   the lease of the proposals and ballots the tools write
+     * @param settleTimeout how long {@code read_estimate} waits for an estimate to settle
+     */
+    public record CapabilityTools(
+            @DefaultValue("false") boolean vote,
+            @DefaultValue("false") boolean aggregate,
+            @DefaultValue("1h") Duration ballotLease,
+            @DefaultValue("10s") Duration settleTimeout) {
+
+        /** Validates the values. */
+        public CapabilityTools {
+            positive(ballotLease, "agentspaces.springai.capability-tools.ballot-lease");
+            positive(settleTimeout, "agentspaces.springai.capability-tools.settle-timeout");
+        }
+
+        static CapabilityTools defaults() {
+            return new CapabilityTools(false, false, Duration.ofHours(1), Duration.ofSeconds(10));
+        }
+
+        /** Whether either family is on. */
+        public boolean any() {
+            return vote || aggregate;
         }
     }
 
@@ -381,11 +415,13 @@ public record AgentSpacesSpringAiProperties(
      * @param enabled       keep the MCP server's tools in step with the fleet
      * @param includeAgents  fleet agents the MCP server may expose; empty exposes none
      * @param discoveryTools also expose the enabled F2 discovery tools
+     * @param capabilityTools also expose the enabled F9 capability tools
      */
     public record Mcp(
             @DefaultValue("false") boolean enabled,
             @DefaultValue List<String> includeAgents,
-            @DefaultValue("false") boolean discoveryTools) {
+            @DefaultValue("false") boolean discoveryTools,
+            @DefaultValue("false") boolean capabilityTools) {
 
         /** Copies the list. */
         public Mcp {
@@ -393,7 +429,7 @@ public record AgentSpacesSpringAiProperties(
         }
 
         static Mcp defaults() {
-            return new Mcp(false, List.of(), false);
+            return new Mcp(false, List.of(), false, false);
         }
     }
 

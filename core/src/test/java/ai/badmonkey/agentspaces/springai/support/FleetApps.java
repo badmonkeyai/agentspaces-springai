@@ -17,6 +17,7 @@ package ai.badmonkey.agentspaces.springai.support;
 
 import ai.badmonkey.agentspaces.spring.AgentSpacesAutoConfiguration;
 import ai.badmonkey.agentspaces.springai.autoconfigure.AgentSpacesSpringAiAutoConfiguration;
+import ai.badmonkey.agentspaces.springai.autoconfigure.FleetCapabilityToolsAutoConfiguration;
 import ai.badmonkey.agentspaces.springai.autoconfigure.FleetDiscoveryToolsAutoConfiguration;
 import ai.badmonkey.agentspaces.springai.autoconfigure.FleetEmbeddingAutoConfiguration;
 import ai.badmonkey.agentspaces.springai.autoconfigure.FleetMcpAutoConfiguration;
@@ -76,7 +77,8 @@ public final class FleetApps {
         return new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(AgentSpacesAutoConfiguration.class,
                         AgentSpacesSpringAiAutoConfiguration.class, FleetToolsAutoConfiguration.class,
-                        FleetDiscoveryToolsAutoConfiguration.class, FleetWorkerAutoConfiguration.class,
+                        FleetDiscoveryToolsAutoConfiguration.class, FleetCapabilityToolsAutoConfiguration.class,
+                        FleetWorkerAutoConfiguration.class,
                         FleetMemoryAutoConfiguration.class, FleetModelClientAutoConfiguration.class,
                         FleetModelServerAutoConfiguration.class, FleetEmbeddingAutoConfiguration.class,
                         FleetUsageAutoConfiguration.class, FleetMcpAutoConfiguration.class,

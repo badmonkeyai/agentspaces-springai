@@ -32,6 +32,7 @@ implementations of Spring AI's own extension points:
 | F6. Fleet-wide usage | Spring AI's `gen_ai` token usage as fleet aggregates, attributed entries, and a console panel |
 | F7. MCP export | The fleet's tools published through Spring AI's MCP server to any MCP client |
 | F8. Patterns | Documented combinations of existing annotations with Spring AI, plus a `VectorStore` asset provider |
+| F9. Capability tools | `FleetCapabilityTools`: the model opens votes, casts ballots, reads tallies and decisions, and contributes to and reads push-sum estimates, as this peer's agent |
 
 ## 2. Decisions
 
@@ -180,6 +181,7 @@ prompt runner as tool objects.
 | Routing | a classifier prompt picks a handler | AgentCards route by entry type, or AUCTION routes by a `@BidFunction` cost model |
 | Orchestrator-workers | an orchestrator prompt fans out subtasks | the orchestrator writes tasks and reads results; with fleet tools (F1), the orchestrator's model calls remote workers directly |
 | Evaluator-optimizer | a judge prompt loops on a draft | a panel of `@Ballot` judges votes, each with its own model or `Evaluator`, and `@OnDecision` accepts or returns the draft |
+| Consensus and aggregation from a cue (0.3.0) | a prompt decides when to ask, and sums what it saw | `@Propose` or a `Motion` return opens a vote when a cue lands; `@SpaceJoin` and `@SpaceReduce` gather the parts; `@OnEstimate` fires when a push-sum settles; with F9, the model itself proposes, casts, and contributes through tools |
 
 ## 6. Feature design
 
@@ -493,6 +495,34 @@ AgentSpaces annotations with Spring AI, with no new core API:
   `VectorStore` as an `AssetProvider`, so agents query it through the connector
   SDK with leased, pull-once results.
 
+**The 0.3.0 annotations.** The starter binds every `@SpaceAgent` bean through
+the core's `AgentBinder`, and this project adds nothing between them, so
+`@Propose`, `@OnEstimate`, `@SpaceJoin`, `@SpaceReduce`, the `tags` and `where`
+filters, and the `Tagged`, `Entries`, and `Motion` returns work in a Spring AI
+application unchanged. A `@Propose` method with an injected `ChatClient` lets
+the model write the question each cue puts to the fleet; the patterns example
+opens its judges' votes with a `Motion` return from a `@SpaceNotify` method.
+
+### F9. Capability tools
+
+`FleetCapabilityTools` offers `@Tool` methods the model uses to take part in
+the fleet's capabilities, the Spring AI counterpart of the LangChain4j
+project's capability tools:
+
+- `propose_vote(id, question, options, quorum)`, `cast_ballot(id, option)`,
+  `read_tally(id)`, and `read_decision(id)` over the group's `VoteClient`;
+- `contribute(epoch, value)` and `read_estimate(epoch)` over its
+  `AggregateClient`, where `read_estimate` waits up to
+  `capability-tools.settle-timeout` for the estimate to settle
+  (`AggregateClient.awaitSettled`) and reports whether it did.
+
+Each family is enabled by its own property, since each lets a model act as the
+application's agent: a ballot the model casts is the application's vote. The
+clients resolve from the group context when a tool first runs, so a peer that
+provides no vote still starts, and the tool answers the model with an error.
+Like F1 and F2, the bean hands out its provider through `toolCallbacks()` and
+reaches MCP only through F7 (`mcp.capability-tools`).
+
 ## 7. Project structure
 
 ```
@@ -501,7 +531,7 @@ agentspaces-springai/                    standalone project at the workspace roo
   core/                                  the library and its autoconfiguration
     src/main/java/ai/badmonkey/agentspaces/springai/
       tools/          FleetToolCallbackProvider, RemoteActionToolCallback,
-                      FleetDiscoveryTools, FleetToolsChangedEvent,
+                      FleetDiscoveryTools, FleetCapabilityTools, FleetToolsChangedEvent,
                       FleetToolFilter, ToolNamingStrategy (+ defaults)
       worker/         TakeLeaseAdvisor, TakeContextAccessor
       memory/         SpaceChatMemoryRepository, ConversationSnapshot,
@@ -516,7 +546,8 @@ agentspaces-springai/                    standalone project at the workspace roo
       mcp/            FleetMcpToolSync
       connect/        VectorStoreAssetProvider
       autoconfigure/  AgentSpacesSpringAiProperties, FleetClientCustomizer,
-                      FleetToolsAutoConfiguration, FleetMemoryAutoConfiguration,
+                      FleetToolsAutoConfiguration, FleetDiscoveryToolsAutoConfiguration,
+                      FleetCapabilityToolsAutoConfiguration, FleetMemoryAutoConfiguration,
                       FleetModelClientAutoConfiguration,
                       FleetModelServerAutoConfiguration,
                       FleetEmbeddingAutoConfiguration, FleetUsageAutoConfiguration,
@@ -643,6 +674,8 @@ a model can reach, or that sends prompts across the fleet, defaults off.
 | `tools.on-timeout` | `result` | `result` returns an explanatory tool result; `throw` raises |
 | `discovery-tools.agents`, `.data`, `.assets` | `false` | Register each `FleetDiscoveryTools` method |
 | `discovery-tools.max-result-chars` | `20000` | Cap on data returned to the model |
+| `capability-tools.vote`, `.aggregate` | `false` | Register the vote tools and the aggregate tools of `FleetCapabilityTools` |
+| `capability-tools.ballot-lease`, `.settle-timeout` | `1h`, `10s` | The lease of proposals and ballots the tools write; how long `read_estimate` waits for a settled estimate |
 | `take-lease.enabled` | `true` | Add `TakeLeaseAdvisor` to every auto-configured `ChatClient.Builder` through a `ChatClientBuilderCustomizer` |
 | `take-lease.stream-renew-interval` | `30s` | Renewal interval while a stream runs |
 | `memory.enabled` | `false` | Register `SpaceChatMemoryRepository` and `FleetChatMemoryAdvisor` |
@@ -664,6 +697,7 @@ a model can reach, or that sends prompts across the fleet, defaults off.
 | `usage.metrics-space` | empty | Also write a `ModelUsage` entry per call to this space |
 | `mcp.enabled` | `false` | Keep the MCP server's tools in step with the fleet |
 | `mcp.include-agents` | empty | Fleet tools the MCP server may expose (empty exposes none) |
+| `mcp.discovery-tools`, `mcp.capability-tools` | `false` | Also export the enabled F2 and F9 tools |
 | `vector-store.enabled` | `false` | Serve the application's `VectorStore` bean as a fleet data asset through `VectorStoreAssetProvider` |
 | `vector-store.space`, `.asset`, `.description`, `.freshness` | `data`, `knowledge-base`, a generic description, `5m` | The data space, asset name, discovery text, and result lease |
 
@@ -801,6 +835,17 @@ stays accurate.
   - `embedder.model` and `embedder.cache-size`;
   - `usage.entry-lease` and `usage.publish-interval`;
   - `mcp.discovery-tools`.
+- **F9 (2026-10-09).** `FleetCapabilityTools` and
+  `FleetCapabilityToolsAutoConfiguration` bring the Spring AI integration to
+  parity with the LangChain4j project's capability tools. The tools resolve
+  `VoteClient` and `AggregateClient` from the fleet's group context on first
+  use, inside each tool, and answer an error string when the capability is
+  not provided, so startup never depends on a capability the model may never
+  use. The properties are `capability-tools.vote`, `.aggregate`,
+  `.ballot-lease`, `.settle-timeout`, and `mcp.capability-tools`. The flow
+  test runs two Spring applications with no third peer: a member that carries
+  no aggregate takes push-sum shares it never mixes back, and the estimate
+  settles off the average.
 - **Fleet usage totals** use push-sum SUM epochs named by model and time window,
   which every peer derives the same way, joined on `usage.publish-interval`.
 - **The patterns** assemble peers with the core API, like the numbered examples,

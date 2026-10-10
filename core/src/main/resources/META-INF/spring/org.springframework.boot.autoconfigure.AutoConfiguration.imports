@@ -1,6 +1,7 @@
 ai.badmonkey.agentspaces.springai.autoconfigure.AgentSpacesSpringAiAutoConfiguration
 ai.badmonkey.agentspaces.springai.autoconfigure.FleetToolsAutoConfiguration
 ai.badmonkey.agentspaces.springai.autoconfigure.FleetDiscoveryToolsAutoConfiguration
+ai.badmonkey.agentspaces.springai.autoconfigure.FleetCapabilityToolsAutoConfiguration
 ai.badmonkey.agentspaces.springai.autoconfigure.FleetWorkerAutoConfiguration
 ai.badmonkey.agentspaces.springai.autoconfigure.FleetMemoryAutoConfiguration
 ai.badmonkey.agentspaces.springai.autoconfigure.FleetModelClientAutoConfiguration

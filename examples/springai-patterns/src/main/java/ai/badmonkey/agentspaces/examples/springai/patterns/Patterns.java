@@ -95,14 +95,14 @@ public final class Patterns {
                 panel.add(peer);
             }
             PatternPeer chair = panel.get(0);
-            chair.group().bind(new JudgePanel.Lead());
+            chair.group().bind(new JudgePanel.Lead(3));
             Thread.sleep(1500);
-            VoteCapability vote = chair.vote("votes");
-            vote.propose("claim:leases", JudgePanel.question("leases make crashed work reappear",
-                    "Leases make crashed work reappear for another worker."), List.of("approve", "reject"), 3, LEASE);
-            vote.propose("claim:gossip", JudgePanel.question("gossip requires a central server",
-                    "Gossip spreads state between peers with no central server."), List.of("approve", "reject"), 3, LEASE);
+            // Each claim is a cue: the lead's Motion return opens its vote.
             Space votes = chair.spaces().get("votes");
+            votes.write(new JudgePanel.Claim("leases", "leases make crashed work reappear",
+                    "Leases make crashed work reappear for another worker."), LEASE);
+            votes.write(new JudgePanel.Claim("gossip", "gossip requires a central server",
+                    "Gossip spreads state between peers with no central server."), LEASE);
             return List.of(await(() -> votes.read(Template.of(JudgePanel.Verdict.class)
                             .where("proposalId", eq("claim:leases"))).orElse(null)),
                     await(() -> votes.read(Template.of(JudgePanel.Verdict.class)

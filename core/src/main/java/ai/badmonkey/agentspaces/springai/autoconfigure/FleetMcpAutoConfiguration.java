@@ -16,6 +16,7 @@
 package ai.badmonkey.agentspaces.springai.autoconfigure;
 
 import ai.badmonkey.agentspaces.springai.mcp.FleetMcpToolSync;
+import ai.badmonkey.agentspaces.springai.tools.FleetCapabilityTools;
 import ai.badmonkey.agentspaces.springai.tools.FleetDiscoveryTools;
 import ai.badmonkey.agentspaces.springai.tools.FleetTools;
 import io.modelcontextprotocol.server.McpSyncServer;
@@ -29,6 +30,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -36,9 +38,12 @@ import java.util.List;
  * F7: publishes the fleet's tools through the application's Spring AI MCP
  * server and keeps them in step as the fleet changes. Needs the MCP server
  * starter on the classpath and {@code agentspaces.springai.mcp.enabled=true};
- * exposes only the agents named in {@code agentspaces.springai.mcp.include-agents}.
+ * exposes only the agents named in {@code agentspaces.springai.mcp.include-agents},
+ * plus the discovery and capability tools when {@code mcp.discovery-tools} and
+ * {@code mcp.capability-tools} say so.
  */
-@AutoConfiguration(after = {FleetToolsAutoConfiguration.class, FleetDiscoveryToolsAutoConfiguration.class},
+@AutoConfiguration(after = {FleetToolsAutoConfiguration.class, FleetDiscoveryToolsAutoConfiguration.class,
+        FleetCapabilityToolsAutoConfiguration.class},
         afterName = "org.springframework.ai.mcp.server.common.autoconfigure.McpServerAutoConfiguration")
 @ConditionalOnClass({McpSyncServer.class, McpToolUtils.class})
 @ConditionalOnBean({McpSyncServer.class, FleetTools.class})
@@ -51,6 +56,7 @@ public class FleetMcpAutoConfiguration {
      * @param server     the MCP server
      * @param tools      the fleet's tools
      * @param discovery  the discovery tools, if enabled
+     * @param capability the capability tools, if enabled
      * @param properties the properties
      * @return the sync
      */
@@ -58,11 +64,18 @@ public class FleetMcpAutoConfiguration {
     @ConditionalOnMissingBean
     public FleetMcpToolSync fleetMcpToolSync(McpSyncServer server, FleetTools tools,
                                              ObjectProvider<FleetDiscoveryTools> discovery,
+                                             ObjectProvider<FleetCapabilityTools> capability,
                                              AgentSpacesSpringAiProperties properties) {
         AgentSpacesSpringAiProperties.Mcp mcp = properties.mcp();
+        List<ToolCallback> extra = new ArrayList<>();
         FleetDiscoveryTools discoveryTools = discovery.getIfAvailable();
-        List<ToolCallback> extra = mcp.discoveryTools() && discoveryTools != null
-                ? Arrays.asList(discoveryTools.toolCallbacks().getToolCallbacks()) : List.of();
+        if (mcp.discoveryTools() && discoveryTools != null) {
+            extra.addAll(Arrays.asList(discoveryTools.toolCallbacks().getToolCallbacks()));
+        }
+        FleetCapabilityTools capabilityTools = capability.getIfAvailable();
+        if (mcp.capabilityTools() && capabilityTools != null) {
+            extra.addAll(Arrays.asList(capabilityTools.toolCallbacks().getToolCallbacks()));
+        }
         return new FleetMcpToolSync(server, tools, mcp.includeAgents(), extra);
     }
 }

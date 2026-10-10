@@ -18,15 +18,69 @@ starter (`agentspaces-spring-boot-starter`). The design and its rationale are in
 
 ## Getting started
 
-Add the library beside the starter and a Spring AI model starter:
+The library is on Maven Central under the group `ai.badmonkey.agentspaces`,
+version `0.2.0`; no repository configuration is needed. Add it beside the
+AgentSpaces starter and a Spring AI model starter. The library releases from
+this repository on its own cadence, so it carries its version explicitly; the
+core's `agentspaces-dependencies` BOM manages the starter's.
+
+Maven (`pom.xml`):
 
 ```xml
-<dependency>
-  <groupId>ai.badmonkey.agentspaces</groupId>
-  <artifactId>agentspaces-springai</artifactId>
-  <version>0.2.0</version>
-</dependency>
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>ai.badmonkey.agentspaces</groupId>
+      <artifactId>agentspaces-dependencies</artifactId>
+      <version>0.2.0</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+
+<dependencies>
+  <dependency>
+    <groupId>ai.badmonkey.agentspaces</groupId>
+    <artifactId>agentspaces-springai</artifactId>
+    <version>0.2.0</version>
+  </dependency>
+  <dependency>
+    <groupId>ai.badmonkey.agentspaces</groupId>
+    <artifactId>agentspaces-spring-boot-starter</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-starter-model-openai</artifactId>
+  </dependency>
+</dependencies>
 ```
+
+Gradle Kotlin DSL (`build.gradle.kts`):
+
+```kotlin
+dependencies {
+    implementation(platform("ai.badmonkey.agentspaces:agentspaces-dependencies:0.2.0"))
+    implementation("ai.badmonkey.agentspaces:agentspaces-springai:0.2.0")
+    implementation("ai.badmonkey.agentspaces:agentspaces-spring-boot-starter")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
+}
+```
+
+Gradle Groovy DSL (`build.gradle`):
+
+```groovy
+dependencies {
+    implementation platform('ai.badmonkey.agentspaces:agentspaces-dependencies:0.2.0')
+    implementation 'ai.badmonkey.agentspaces:agentspaces-springai:0.2.0'
+    implementation 'ai.badmonkey.agentspaces:agentspaces-spring-boot-starter'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+}
+```
+
+The Spring AI model starter is whichever provider the application uses; its
+version comes from the `spring-ai-bom` or the Spring Boot parent, as in any
+Spring AI project.
 
 A worker is a `@SpaceAgent` bean with an injected `ChatClient.Builder` and a
 `@SpaceTake` method. The space distributes the work, the model does it, and the
@@ -71,6 +125,7 @@ Spring Boot applications.
 | F6. Fleet-wide usage | `FleetUsageObservationHandler`, `FleetUsage`, `UsagePanel` | Token usage from Spring AI's `gen_ai` observations, as fleet-wide push-sum totals, attributed usage entries, and a console panel. |
 | F7. MCP export | `FleetMcpToolSync` | The fleet agents a deployment names, published through Spring AI's MCP server and kept in step with `list_changed`. |
 | F8. Patterns | `VectorStoreAssetProvider` (served with `vector-store.enabled=true`); [examples/springai-patterns](examples/springai-patterns/README.md) | A `VectorStore` as a fleet data asset; model judges voting with `@Ballot`; models priced by tokens under AUCTION; an extraction ensemble. |
+| F9. Capability tools | `FleetCapabilityTools` | `propose_vote`, `cast_ballot`, `read_tally`, `read_decision`, `contribute`, and `read_estimate`: the model opens votes, casts ballots, and contributes to fleet-wide averages as this peer's agent, each family enabled separately. |
 
 Each feature has its own auto-configuration and its own `enabled` property;
 F1 and the take-lease advisor are on by default, and every feature that widens
@@ -87,11 +142,47 @@ take from the space with `admission: authorizer` and the `SPACE_TAKE` grant.
 ### Why FleetTools is not a ToolCallbackProvider bean
 
 Spring AI's MCP server auto-configuration publishes every `ToolCallbackProvider`
-bean in the context to outside MCP clients. `FleetTools` and
-`FleetDiscoveryTools` are therefore plain beans that hand out their providers
-through `toolCallbacks()`, which the application attaches to a `ChatClient`
-explicitly. The fleet crosses into MCP only through F7, which exposes nothing
-until `agentspaces.springai.mcp.include-agents` names the agents it may.
+bean in the context to outside MCP clients. `FleetTools`, `FleetDiscoveryTools`,
+and `FleetCapabilityTools` are therefore plain beans that hand out their
+providers through `toolCallbacks()`, which the application attaches to a
+`ChatClient` explicitly. The fleet crosses into MCP only through F7, which
+exposes nothing until `agentspaces.springai.mcp.include-agents` names the agents
+it may, and `mcp.discovery-tools` and `mcp.capability-tools` say the F2 and F9
+tools go too.
+
+### The 0.3.0 annotations
+
+The starter binds every `@SpaceAgent` bean through the core's `AgentBinder`,
+and this project adds nothing between them, so the 0.3.0 annotation surface
+works in a Spring AI application unchanged: `@Propose` opens a vote for each
+cue, `@OnEstimate` fires when a push-sum epoch settles, `@SpaceJoin` gathers
+the parts of one result, `@SpaceReduce` folds a stream of entries, `tags` and
+`where` filter what a method sees before it is decoded, and a method may return
+`Tagged`, `Entries`, or `Motion` in place of a plain entry. A reviewer that puts
+each finding to the fleet, with a model writing the question:
+
+```java
+@SpaceAgent(description = "Asks the fleet whether a finding needs remediation")
+public class Reviewer {
+    private final ChatClient chat;
+
+    Reviewer(ChatClient.Builder builder) { this.chat = builder.build(); }
+
+    @Propose(space = "findings", vote = "votes", prefix = "remediate:", key = "findingId",
+            options = {"approve", "reject"}, quorum = 3, lease = "12h", where = "severity=high")
+    public String ask(Finding finding) {
+        return chat.prompt().user("In one sentence, what should the fleet decide about: " + finding).call().content();
+    }
+}
+```
+
+The `votes` space is the starter's vote space (`agentspaces.capabilities.votes-space`,
+`votes` by default); `@Ballot` and `@OnDecision` methods elsewhere in the fleet
+filter on the `remediate:` prefix as before. The
+[patterns example](examples/springai-patterns/README.md) opens its judges' votes
+with a `Motion` return. `AnnotationPassthroughTest` in `core/src/test` boots two
+Spring Boot applications and proves each of these annotations and return
+conventions through `@SpaceAgent` beans, reading every outcome from a space.
 
 ## Extension points
 
@@ -117,7 +208,10 @@ Spring AI's own interfaces are the rest of the API: the components are a
 
 All properties sit under `agentspaces.springai`. The spaces that F2, F3, F4,
 F6, and F8 use must be declared under `agentspaces.groups[].spaces`; a missing one
-fails at startup with the YAML that adds it.
+fails at startup with the YAML that adds it. F9 resolves the starter's vote and
+aggregate capabilities (`agentspaces.capabilities.vote` and `.aggregate`, both
+on by default) when a tool first runs; a tool whose capability is off answers
+the model with an error.
 
 ```yaml
 agentspaces:
@@ -135,6 +229,9 @@ agentspaces:
     memory:
       enabled: true
       conversation-id: take
+    capability-tools:
+      vote: true                      # propose_vote, cast_ballot, read_tally, read_decision
+      aggregate: false                # contribute, read_estimate
     model-client:
       enabled: true                   # this node calls models through the fleet
     model-server:
@@ -148,6 +245,7 @@ agentspaces:
     mcp:
       enabled: false
       include-agents: []
+      capability-tools: false
 ```
 
 | Property | Default | Meaning |
@@ -159,6 +257,8 @@ agentspaces:
 | `tools.refresh-interval`, `tools.cache-ttl` | `5s`, `1s` | Change-event cadence and snapshot caching |
 | `discovery-tools.agents`, `.assets`, `.data` | `false` | Enable each discovery tool |
 | `discovery-tools.data-space`, `.timeout`, `.max-result-chars` | `data`, `10s`, `20000` | Data space, query timeout, result cap |
+| `capability-tools.vote`, `.aggregate` | `false` | Enable the vote tools (`propose_vote`, `cast_ballot`, `read_tally`, `read_decision`) and the aggregate tools (`contribute`, `read_estimate`) |
+| `capability-tools.ballot-lease`, `.settle-timeout` | `1h`, `10s` | The lease of proposals and ballots the tools write; how long `read_estimate` waits for the estimate to settle |
 | `take-lease.enabled`, `take-lease.stream-renew-interval` | `true`, `30s` | The lease advisor |
 | `memory.enabled`, `.space`, `.ttl`, `.conversation-id`, `.max-messages` | `false`, `conversations`, `24h`, `take`, `20` | Chat memory in the space |
 | `model-client.enabled`, `.space`, `.model`, `.timeout`, `.stream.on-restart` | `false`, `model-requests`, server default, `120s`, `fail` | The calling side of F4 |
@@ -166,7 +266,7 @@ agentspaces:
 | `model-server.lease`, `.chunk-interval`, `.chunk-max-deltas`, `.chunk-lease`, `.response-lease`, `.concurrency`, `.model-beans.<model>` | `2m`, `100ms`, `32`, `2m`, `10m`, `4`, none | Server tuning; `model-beans` maps a model to a `ChatModel` bean when several providers are present |
 | `embedder.type`, `.model`, `.require-match`, `.cache-size` | `hashing`, class name, `true`, `4096` | F5 |
 | `usage.enabled`, `.metrics-space`, `.entry-lease`, `.publish-interval` | `false`, none, `24h`, `30s` | F6 |
-| `mcp.enabled`, `.include-agents`, `.discovery-tools` | `false`, none, `false` | F7 |
+| `mcp.enabled`, `.include-agents`, `.discovery-tools`, `.capability-tools` | `false`, none, `false`, `false` | F7; the last two also export the enabled F2 and F9 tools |
 | `vector-store.enabled`, `.space`, `.asset`, `.description`, `.freshness` | `false`, `data`, `knowledge-base`, a generic description, `5m` | F8: serve the application's `VectorStore` bean as a fleet data asset |
 
 ## Security
@@ -180,23 +280,27 @@ agentspaces:
   `aspace:model-serve[:<model>]` scope under the OIDC profiles.
 - **Tool descriptions are model input.** Filter which cards become tools, and
   consider `tools.require-attested=true` with subordinate agent keys.
+- **A capability tool acts as this peer's agent.** A ballot `cast_ballot` writes
+  counts as the application's own vote, so enable F9 only on peers whose model
+  should hold that vote.
 - **Credentials stay on server peers.** Under F4, provider keys live only on the
   `ModelServer` peers.
 - **MCP clients are outside the fleet.** F7 exposes nothing until named.
 
 ## Building and testing
 
-The project consumes the published AgentSpaces libraries by Maven coordinates.
-Once the core artifacts at `agentspaces.version` are on Maven Central:
+The project consumes the published AgentSpaces libraries by Maven coordinates
+(`agentspaces.version` in the parent pom), resolved from Maven Central:
 
 ```
 mvn clean verify
 ```
 
-Until then, install the core into your local repository first:
+To build against unreleased core sources, install the core into the local
+repository first and point `agentspaces.version` at it:
 
 ```
-git clone https://github.com/badmonkeyai/agentspaces.git
+git clone https://github.com/badmonkeyai/AgentSpaces.git agentspaces
 mvn -f agentspaces/pom.xml install -DskipTests
 mvn clean verify
 ```
@@ -211,7 +315,8 @@ parent pom. See [CONTRIBUTING.md](CONTRIBUTING.md).
 Tests run on scripted `ChatModel` and `EmbeddingModel` beans, so no test calls a
 live provider. Unit tests cover each component; `ApplicationContextRunner` tests
 cover every auto-configuration condition and override; and flow tests run real
-fleets over TCP: fleet tools, discovery, a worker killed mid-loop that resumes on
+fleets over TCP: fleet tools, discovery, the capability tools voting and
+contributing across two applications, a worker killed mid-loop that resumes on
 another peer with its conversation, the model service with crashes, streaming,
 cancellation, price routing, and trust, usage across peers, and MCP export to a
 real MCP client.

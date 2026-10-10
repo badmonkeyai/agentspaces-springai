@@ -18,26 +18,37 @@ package ai.badmonkey.agentspaces.examples.springai.patterns;
 import ai.badmonkey.agentspaces.agent.annotation.AgentSpec;
 import ai.badmonkey.agentspaces.agent.annotation.Ballot;
 import ai.badmonkey.agentspaces.agent.annotation.OnDecision;
+import ai.badmonkey.agentspaces.agent.annotation.SpaceNotify;
+import ai.badmonkey.agentspaces.agent.capability.Motion;
+import ai.badmonkey.agentspaces.api.space.Lease;
 import ai.badmonkey.agentspaces.capabilities.vote.VoteCapability;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.evaluation.EvaluationRequest;
 import org.springframework.ai.evaluation.Evaluator;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Pattern: a panel of model judges. Each judge is an ordinary {@code @Ballot}
- * agent whose vote comes from a Spring AI {@link Evaluator} (a
- * {@code FactCheckingEvaluator} over the judge's own model) checking a claim
- * against its evidence; the lead's {@code @OnDecision} method records the
- * verdict once the quorum closes. Every ballot is a signed entry, so the panel's
- * reasoning is auditable from the space: which judge, on which peer, voted how.
+ * Pattern: a panel of model judges. A {@link Claim} written to the votes space
+ * is the cue: the lead's {@code @SpaceNotify} method returns a {@link Motion},
+ * and the binder opens the vote as the lead, once per claim (ISSUE-Motion).
+ * Each judge is an ordinary {@code @Ballot} agent whose vote comes from a
+ * Spring AI {@link Evaluator} (a {@code FactCheckingEvaluator} over the
+ * judge's own model) checking the claim against its evidence; the lead's
+ * {@code @OnDecision} method records the verdict once the quorum closes. Every
+ * ballot is a signed entry, so the panel's reasoning is auditable from the
+ * space: which judge, on which peer, voted how.
  */
 public final class JudgePanel {
 
     /** Separates a proposal's claim from its evidence in the question text. */
     public static final String EVIDENCE = "\n---\n";
+
+    /** A claim put to the panel, with the evidence the judges check it against. */
+    public record Claim(String id, String claim, String evidence) {
+    }
 
     /** The recorded verdict. */
     public record Verdict(String proposalId, String winner, String tally) {
@@ -72,9 +83,34 @@ public final class JudgePanel {
         }
     }
 
-    /** The lead: records each closed claim. */
-    @AgentSpec(name = "lead", description = "Records the panel's verdicts", goals = {"record verdicts"})
+    /** The lead: opens a vote for each claim and records each closed one. */
+    @AgentSpec(name = "lead", description = "Puts claims to the panel and records its verdicts",
+            goals = {"open votes", "record verdicts"})
     public static final class Lead {
+        private final int quorum;
+
+        /**
+         * Creates the lead.
+         *
+         * @param quorum the ballots that close a claim
+         */
+        public Lead(int quorum) {
+            this.quorum = quorum;
+        }
+
+        /**
+         * Opens the vote on a claim: the returned motion is the proposal, and the
+         * binder opens it once per claim id, as this agent.
+         *
+         * @param claim the claim
+         * @return the motion
+         */
+        @SpaceNotify(space = "votes", lease = "1h")
+        public Motion open(Claim claim) {
+            return Motion.in("votes", "claim:" + claim.id(), question(claim.claim(), claim.evidence()),
+                    List.of("approve", "reject"), quorum, Lease.of(Duration.ofMinutes(10)));
+        }
+
         /**
          * Records a decision.
          *

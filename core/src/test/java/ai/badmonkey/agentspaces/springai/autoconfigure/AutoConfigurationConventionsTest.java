@@ -32,6 +32,7 @@ import ai.badmonkey.agentspaces.springai.model.StreamRestartPolicy;
 import ai.badmonkey.agentspaces.springai.support.FleetApps;
 import ai.badmonkey.agentspaces.springai.support.ScriptedChatModel;
 import ai.badmonkey.agentspaces.springai.support.ScriptedEmbeddingModel;
+import ai.badmonkey.agentspaces.springai.tools.FleetCapabilityTools;
 import ai.badmonkey.agentspaces.springai.tools.FleetDiscoveryTools;
 import ai.badmonkey.agentspaces.springai.tools.FleetTools;
 import ai.badmonkey.agentspaces.springai.usage.FleetUsageObservationHandler;
@@ -121,6 +122,30 @@ class AutoConfigurationConventionsTest {
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context.getBean(FleetDiscoveryTools.class)).isSameAs(own);
+                });
+    }
+
+    // F9: capability tools
+
+    @Test
+    void capabilityToolsBackOffWithoutSpringAisToolApi() {
+        FleetApps.runner().withClassLoader(new FilteredClassLoader(ToolCallbackProvider.class))
+                .withPropertyValues("agentspaces.springai.capability-tools.vote=true")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).doesNotHaveBean(FleetCapabilityTools.class);
+                });
+    }
+
+    @Test
+    void anApplicationsCapabilityToolsReplaceTheDefault() {
+        FleetCapabilityTools own = new FleetCapabilityTools(() -> null, () -> null, Duration.ofHours(1),
+                Duration.ofSeconds(1), new JsonMapper(), Set.of());
+        FleetApps.runner().withBean("ownCapabilityTools", FleetCapabilityTools.class, () -> own)
+                .withPropertyValues("agentspaces.springai.capability-tools.aggregate=true")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(FleetCapabilityTools.class)).isSameAs(own);
                 });
     }
 
