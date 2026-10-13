@@ -19,7 +19,7 @@ starter (`agentspaces-spring-boot-starter`). The design and its rationale are in
 ## Getting started
 
 The library is on Maven Central under the group `ai.badmonkey.agentspaces`,
-version `0.2.0`; no repository configuration is needed. Add it beside the
+version `0.3.0`; no repository configuration is needed. Add it beside the
 AgentSpaces starter and a Spring AI model starter. The library releases from
 this repository on its own cadence, so it carries its version explicitly; the
 core's `agentspaces-dependencies` BOM manages the starter's.
@@ -32,7 +32,7 @@ Maven (`pom.xml`):
     <dependency>
       <groupId>ai.badmonkey.agentspaces</groupId>
       <artifactId>agentspaces-dependencies</artifactId>
-      <version>0.2.0</version>
+      <version>0.3.0</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
@@ -43,7 +43,7 @@ Maven (`pom.xml`):
   <dependency>
     <groupId>ai.badmonkey.agentspaces</groupId>
     <artifactId>agentspaces-springai</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
   </dependency>
   <dependency>
     <groupId>ai.badmonkey.agentspaces</groupId>
@@ -60,8 +60,8 @@ Gradle Kotlin DSL (`build.gradle.kts`):
 
 ```kotlin
 dependencies {
-    implementation(platform("ai.badmonkey.agentspaces:agentspaces-dependencies:0.2.0"))
-    implementation("ai.badmonkey.agentspaces:agentspaces-springai:0.2.0")
+    implementation(platform("ai.badmonkey.agentspaces:agentspaces-dependencies:0.3.0"))
+    implementation("ai.badmonkey.agentspaces:agentspaces-springai:0.3.0")
     implementation("ai.badmonkey.agentspaces:agentspaces-spring-boot-starter")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
 }
@@ -71,8 +71,8 @@ Gradle Groovy DSL (`build.gradle`):
 
 ```groovy
 dependencies {
-    implementation platform('ai.badmonkey.agentspaces:agentspaces-dependencies:0.2.0')
-    implementation 'ai.badmonkey.agentspaces:agentspaces-springai:0.2.0'
+    implementation platform('ai.badmonkey.agentspaces:agentspaces-dependencies:0.3.0')
+    implementation 'ai.badmonkey.agentspaces:agentspaces-springai:0.3.0'
     implementation 'ai.badmonkey.agentspaces:agentspaces-spring-boot-starter'
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
 }

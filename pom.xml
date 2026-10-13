@@ -22,7 +22,7 @@
 
   <groupId>ai.badmonkey.agentspaces</groupId>
   <artifactId>agentspaces-springai-parent</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <packaging>pom</packaging>
   <name>AgentSpaces Spring AI :: Parent</name>
   <description>
@@ -85,7 +85,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <agentspaces.version>0.2.0</agentspaces.version>
+    <agentspaces.version>0.3.0</agentspaces.version>
     <spring-boot.version>4.1.1</spring-boot.version>
     <spring-ai.version>2.0.1</spring-ai.version>
     <!-- Jackson above the Boot/Spring AI managed versions; drop once they catch up. -->
