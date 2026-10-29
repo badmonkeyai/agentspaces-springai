@@ -51,6 +51,11 @@ class FleetCapabilityToolsAutoConfigurationTest {
                         .toolCallbacks().getToolCallbacks())
                         .extracting(c -> c.getToolDefinition().name())
                         .containsExactlyInAnyOrder("contribute", "read_estimate"));
+        FleetApps.runner().withPropertyValues("agentspaces.springai.capability-tools.content=true")
+                .run(context -> assertThat(context.getBean(FleetCapabilityTools.class)
+                        .toolCallbacks().getToolCallbacks())
+                        .extracting(c -> c.getToolDefinition().name())
+                        .containsExactlyInAnyOrderElementsOf(FleetCapabilityTools.CONTENT_TOOLS));
     }
 
     @Test

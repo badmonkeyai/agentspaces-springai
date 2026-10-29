@@ -40,8 +40,9 @@ import java.util.Map;
  * {@code @SpaceAgent} bean with an injected {@code ChatClient.Builder} and one
  * {@code @SpaceTake} method. The orchestrator application attaches the fleet's
  * tools to its {@code ChatClient}, and its model calls both workers, on other
- * peers, from its own tool loop. No application knows another's address or
- * name; the workers' AgentCards are the tool catalog.
+ * peers, from its own tool loop. Two applications list the first one's
+ * address as a seed, and none names another; the workers' AgentCards are the
+ * tool catalog.
  *
  * <p>Run all three in one process with {@code mvn -q -pl examples/springai-fleet exec:java}.
  * The demo model is scripted so the example runs offline; set

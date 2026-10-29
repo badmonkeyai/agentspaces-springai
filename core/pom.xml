@@ -81,6 +81,11 @@
       <groupId>ai.badmonkey.agentspaces</groupId>
       <artifactId>agentspaces-capabilities</artifactId>
     </dependency>
+    <!-- The content swarm tools of F9 (srad/large-networks-bulk-data.md §7.2). -->
+    <dependency>
+      <groupId>ai.badmonkey.agentspaces</groupId>
+      <artifactId>agentspaces-content</artifactId>
+    </dependency>
     <dependency>
       <groupId>ai.badmonkey.agentspaces</groupId>
       <artifactId>agentspaces-connect-core</artifactId>

@@ -39,7 +39,8 @@ import tools.jackson.databind.json.JsonMapper;
 @ConditionalOnClass(ToolCallbackProvider.class)
 @ConditionalOnBean(FleetContext.class)
 @ConditionalOnExpression("${agentspaces.springai.capability-tools.vote:false}"
-        + " or ${agentspaces.springai.capability-tools.aggregate:false}")
+        + " or ${agentspaces.springai.capability-tools.aggregate:false}"
+        + " or ${agentspaces.springai.capability-tools.content:false}")
 public class FleetCapabilityToolsAutoConfiguration {
 
     /**
@@ -56,7 +57,8 @@ public class FleetCapabilityToolsAutoConfiguration {
                                                      AgentSpacesSpringAiProperties properties,
                                                      ObjectProvider<JsonMapper> json) {
         AgentSpacesSpringAiProperties.CapabilityTools config = properties.capabilityTools();
-        return new FleetCapabilityTools(fleet, config.vote(), config.aggregate(), config.ballotLease(),
-                config.settleTimeout(), json.getIfAvailable(JsonMapper::new));
+        return new FleetCapabilityTools(fleet, config.vote(), config.aggregate(), config.content(),
+                config.ballotLease(), config.settleTimeout(), config.fetchTimeout(),
+                json.getIfAvailable(JsonMapper::new));
     }
 }

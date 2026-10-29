@@ -17,16 +17,26 @@ package ai.badmonkey.agentspaces.springai.tools;
 
 import ai.badmonkey.agentspaces.agent.capability.AggregateClient;
 import ai.badmonkey.agentspaces.agent.capability.VoteClient;
+import ai.badmonkey.agentspaces.agent.content.Manifest;
 import ai.badmonkey.agentspaces.api.space.Lease;
 import ai.badmonkey.agentspaces.capabilities.aggregate.PushSumAggregate;
 import ai.badmonkey.agentspaces.capabilities.vote.VoteCapability;
+import ai.badmonkey.agentspaces.content.Content;
+import ai.badmonkey.agentspaces.content.Fetch;
+import ai.badmonkey.agentspaces.content.PublishOptions;
 import ai.badmonkey.agentspaces.springai.FleetContext;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -57,10 +67,16 @@ public class FleetCapabilityTools {
     /** The aggregate family's tool names. */
     public static final List<String> AGGREGATE_TOOLS = List.of("contribute", "read_estimate");
 
+    /** The content family's tool names (srad/large-networks-bulk-data.md §7.2). */
+    public static final List<String> CONTENT_TOOLS = List.of("publish_content", "fetch_content", "read_content",
+            "describe_content", "list_content");
+
     private final Supplier<VoteClient> vote;
     private final Supplier<AggregateClient> aggregate;
+    private final Supplier<Content> content;
     private final Duration ballotLease;
     private final Duration settleTimeout;
+    private final Duration fetchTimeout;
     private final JsonMapper json;
     private final Set<String> enabled;
 
@@ -77,9 +93,36 @@ public class FleetCapabilityTools {
      */
     public FleetCapabilityTools(FleetContext fleet, boolean vote, boolean aggregate, Duration ballotLease,
                                 Duration settleTimeout, JsonMapper json) {
+        this(fleet, vote, aggregate, false, ballotLease, settleTimeout, Duration.ofMinutes(10), json);
+    }
+
+    /**
+     * Creates the tools over the fleet's group context with the content family too.
+     *
+     * @param fleet         the fleet context
+     * @param vote          whether the vote tools are on
+     * @param aggregate     whether the aggregate tools are on
+     * @param content       whether the content swarm tools are on ({@code agentspaces.content.enabled} must build one)
+     * @param ballotLease   the lease of proposals and ballots the tools write
+     * @param settleTimeout how long {@code read_estimate} waits for an estimate to settle
+     * @param fetchTimeout  how long {@code fetch_content} waits for an artifact
+     * @param json          the JSON mapper results are written with
+     */
+    public FleetCapabilityTools(FleetContext fleet, boolean vote, boolean aggregate, boolean content,
+                                Duration ballotLease, Duration settleTimeout, Duration fetchTimeout, JsonMapper json) {
         this(() -> fleet.group().capability(VoteClient.class),
                 () -> fleet.group().capability(AggregateClient.class),
-                ballotLease, settleTimeout, json, enabled(vote, aggregate));
+                () -> contentOf(fleet),
+                ballotLease, settleTimeout, fetchTimeout, json, enabled(vote, aggregate, content));
+    }
+
+    /** The group's content swarm, when {@code agentspaces.content.enabled} built one. */
+    public static Content contentOf(FleetContext fleet) {
+        return fleet.group().provider(Content.TYPE)
+                .filter(Content.class::isInstance)
+                .map(Content.class::cast)
+                .orElseThrow(() -> new IllegalStateException(
+                        "the content swarm is not enabled in this group (agentspaces.content.enabled=true)"));
     }
 
     /**
@@ -95,22 +138,52 @@ public class FleetCapabilityTools {
     public FleetCapabilityTools(Supplier<VoteClient> vote, Supplier<AggregateClient> aggregate,
                                 Duration ballotLease, Duration settleTimeout, JsonMapper json,
                                 Set<String> enabled) {
+        this(vote, aggregate, () -> {
+            throw new IllegalStateException("no content swarm was given to these tools");
+        }, ballotLease, settleTimeout, Duration.ofMinutes(10), json, enabled);
+    }
+
+    /**
+     * Creates the tools over explicit clients, the content swarm included.
+     *
+     * @param vote          resolves the vote client; may throw when the group provides no vote
+     * @param aggregate     resolves the aggregate client; may throw when the group provides none
+     * @param content       resolves the content swarm; may throw when the group provides none
+     * @param ballotLease   the lease of proposals and ballots the tools write
+     * @param settleTimeout how long {@code read_estimate} waits for an estimate to settle
+     * @param fetchTimeout  how long {@code fetch_content} waits for an artifact
+     * @param json          the JSON mapper results are written with
+     * @param enabled       the tool names {@link #toolCallbacks()} exposes
+     */
+    public FleetCapabilityTools(Supplier<VoteClient> vote, Supplier<AggregateClient> aggregate,
+                                Supplier<Content> content, Duration ballotLease, Duration settleTimeout,
+                                Duration fetchTimeout, JsonMapper json, Set<String> enabled) {
         this.vote = Objects.requireNonNull(vote, "vote");
         this.aggregate = Objects.requireNonNull(aggregate, "aggregate");
+        this.content = Objects.requireNonNull(content, "content");
         this.ballotLease = Objects.requireNonNull(ballotLease, "ballotLease");
         this.settleTimeout = Objects.requireNonNull(settleTimeout, "settleTimeout");
+        this.fetchTimeout = Objects.requireNonNull(fetchTimeout, "fetchTimeout");
         this.json = Objects.requireNonNull(json, "json");
         this.enabled = Set.copyOf(enabled);
     }
 
     /** The tool names the two switches enable. */
     public static Set<String> enabled(boolean vote, boolean aggregate) {
+        return enabled(vote, aggregate, false);
+    }
+
+    /** The tool names the three switches enable. */
+    public static Set<String> enabled(boolean vote, boolean aggregate, boolean content) {
         Set<String> names = new LinkedHashSet<>();
         if (vote) {
             names.addAll(VOTE_TOOLS);
         }
         if (aggregate) {
             names.addAll(AGGREGATE_TOOLS);
+        }
+        if (content) {
+            names.addAll(CONTENT_TOOLS);
         }
         return names;
     }
@@ -251,6 +324,165 @@ public class FleetCapabilityTools {
             out.put("settled", settled.isPresent());
             return render(out);
         });
+    }
+
+    // ---- the content family (srad/large-networks-bulk-data.md §7.2)
+
+    /**
+     * Publishes a file as an artifact.
+     *
+     * @param path the file on this peer
+     * @param name a display name, or empty
+     * @return the manifest's root, name, size, and pieces, or an error
+     */
+    @Tool(name = "publish_content", description = "Publishes a file from this peer's disk as a fleet artifact:"
+            + " hashed in pieces, announced to the group, and served to every member that fetches it. Returns"
+            + " the root, the content id other members fetch by.")
+    public String publishContent(@ToolParam(description = "The path of the file on this peer") String path,
+                                 @ToolParam(description = "A display name for the artifact, or empty", required = false)
+                                 String name) {
+        return withContent(swarm -> {
+            try {
+                PublishOptions options = swarm.publishOptions();
+                if (name != null && !name.isBlank()) {
+                    options = options.withName(name);
+                }
+                return render(manifest(swarm.publish(Path.of(path), options)));
+            } catch (IOException | RuntimeException e) {
+                return error("publish failed: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Fetches an artifact from every holder.
+     *
+     * @param root the artifact's root
+     * @return the progress, or an error
+     */
+    @Tool(name = "fetch_content", description = "Fetches a fleet artifact by its root from every member that"
+            + " holds it, waiting up to the configured timeout; returns how much arrived and whether it is complete.")
+    public String fetchContent(@ToolParam(description = "The artifact's root (a content id starting with b)") String root) {
+        return withContent(swarm -> {
+            try {
+                Fetch fetch = swarm.fetch(root);
+                boolean complete = fetch.await(fetchTimeout);
+                return render(progress(root, fetch, complete));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return error("interrupted");
+            } catch (RuntimeException e) {
+                return error("fetch failed: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Reads a fetched artifact as text.
+     *
+     * @param root     the artifact's root
+     * @param maxChars the most characters to return
+     * @return the text, or an error
+     */
+    @Tool(name = "read_content", description = "Reads a fetched fleet artifact as UTF-8 text, up to a number of"
+            + " characters; fetch it first.")
+    public String readContent(@ToolParam(description = "The artifact's root") String root,
+                              @ToolParam(description = "The most characters to return") int maxChars) {
+        return withContent(swarm -> {
+            try {
+                Fetch fetch = swarm.fetch(root);
+                if (!fetch.complete()) { // await(ZERO) waits without bound; a read never blocks
+                    return render(Map.of("root", root, "complete", false, "error", "not fetched yet; call fetch_content"));
+                }
+                try (SeekableByteChannel channel = fetch.open()) {
+                    int bound = (int) Math.min(Math.max(0, maxChars) * 4L, channel.size());
+                    ByteBuffer buffer = ByteBuffer.allocate(bound);
+                    while (buffer.hasRemaining() && channel.read(buffer) >= 0) {
+                        // drain
+                    }
+                    String text = new String(buffer.array(), 0, buffer.position(), StandardCharsets.UTF_8);
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("root", root);
+                    out.put("size", channel.size());
+                    out.put("text", text.length() > maxChars ? text.substring(0, Math.max(0, maxChars)) : text);
+                    out.put("truncated", text.length() > maxChars || bound < channel.size());
+                    return render(out);
+                }
+            } catch (IOException | RuntimeException e) {
+                return error("read failed: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Describes an artifact.
+     *
+     * @param root the artifact's root
+     * @return the manifest and the holders, or that it is unknown
+     */
+    @Tool(name = "describe_content", description = "What the fleet knows about an artifact: its manifest and how"
+            + " many members hold it in full or in part.")
+    public String describeContent(@ToolParam(description = "The artifact's root") String root) {
+        return withContent(swarm -> {
+            Optional<Content.Description> described = swarm.describe(root);
+            if (described.isEmpty()) {
+                return render(Map.of("root", root, "known", false));
+            }
+            Map<String, Object> out = manifest(described.get().manifest());
+            out.put("completeHolders", described.get().completeHolders());
+            out.put("partialHolders", described.get().partialHolders());
+            out.put("heldHere", described.get().held().cardinality());
+            return render(out);
+        });
+    }
+
+    /**
+     * Lists the group's artifacts.
+     *
+     * @return root, name, size, pieces, and media type of each
+     */
+    @Tool(name = "list_content", description = "The artifacts announced in this group: root, name, size, and"
+            + " media type of each.")
+    public String listContent() {
+        return withContent(swarm -> {
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (Manifest m : swarm.list(100)) {
+                out.add(manifest(m));
+            }
+            return render(out);
+        });
+    }
+
+    private static Map<String, Object> manifest(Manifest m) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("root", m.root());
+        out.put("name", m.name());
+        out.put("size", m.size());
+        out.put("pieces", m.pieces());
+        out.put("mediaType", m.mediaType());
+        return out;
+    }
+
+    private static Map<String, Object> progress(String root, Fetch fetch, boolean complete) {
+        Fetch.Progress p = fetch.progress();
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("root", root);
+        out.put("complete", complete);
+        out.put("piecesVerified", p.piecesVerified());
+        out.put("pieces", p.pieces());
+        out.put("bytesReceived", p.bytesReceived());
+        out.put("sources", p.bytesBySource().size());
+        return out;
+    }
+
+    private String withContent(Function<Content, String> body) {
+        Content swarm;
+        try {
+            swarm = content.get();
+        } catch (RuntimeException e) {
+            return error("the content swarm is not provided on this peer: " + e.getMessage());
+        }
+        return body.apply(swarm);
     }
 
     private String withVote(Function<VoteClient, String> body) {

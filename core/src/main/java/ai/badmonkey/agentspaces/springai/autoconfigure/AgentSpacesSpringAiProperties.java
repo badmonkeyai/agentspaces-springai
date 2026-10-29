@@ -163,22 +163,26 @@ public record AgentSpacesSpringAiProperties(
     public record CapabilityTools(
             @DefaultValue("false") boolean vote,
             @DefaultValue("false") boolean aggregate,
+            @DefaultValue("false") boolean content,
             @DefaultValue("1h") Duration ballotLease,
-            @DefaultValue("10s") Duration settleTimeout) {
+            @DefaultValue("10s") Duration settleTimeout,
+            @DefaultValue("10m") Duration fetchTimeout) {
 
         /** Validates the values. */
         public CapabilityTools {
             positive(ballotLease, "agentspaces.springai.capability-tools.ballot-lease");
             positive(settleTimeout, "agentspaces.springai.capability-tools.settle-timeout");
+            positive(fetchTimeout, "agentspaces.springai.capability-tools.fetch-timeout");
         }
 
         static CapabilityTools defaults() {
-            return new CapabilityTools(false, false, Duration.ofHours(1), Duration.ofSeconds(10));
+            return new CapabilityTools(false, false, false, Duration.ofHours(1), Duration.ofSeconds(10),
+                    Duration.ofMinutes(10));
         }
 
-        /** Whether either family is on. */
+        /** Whether any family is on. */
         public boolean any() {
-            return vote || aggregate;
+            return vote || aggregate || content;
         }
     }
 

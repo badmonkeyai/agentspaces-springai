@@ -433,7 +433,7 @@ Spring Boot applications.
 | F6. Fleet-wide usage | `FleetUsageObservationHandler`, `FleetUsage`, `UsagePanel` | Token usage from Spring AI's `gen_ai` observations, as fleet-wide push-sum totals, attributed usage entries, and a console panel. |
 | F7. MCP export | `FleetMcpToolSync` | The fleet agents a deployment names, published through Spring AI's MCP server and kept in step with `list_changed`. |
 | F8. Patterns | `VectorStoreAssetProvider` (served with `vector-store.enabled=true`); [examples/springai-patterns](examples/springai-patterns/README.md) | A `VectorStore` as a fleet data asset; model judges voting with `@Ballot`; models priced by tokens under AUCTION; an extraction ensemble. |
-| F9. Capability tools | `FleetCapabilityTools` | `propose_vote`, `cast_ballot`, `read_tally`, `read_decision`, `contribute`, and `read_estimate`: the model opens votes, casts ballots, and contributes to fleet-wide averages as this peer's agent, each family enabled separately. |
+| F9. Capability tools | `FleetCapabilityTools` | `propose_vote`, `cast_ballot`, `read_tally`, `read_decision`, `contribute`, and `read_estimate`: the model opens votes, casts ballots, and contributes to fleet-wide averages as this peer's agent, each family enabled separately. With `capability-tools.content` the model also publishes a file as a fleet artifact and fetches, reads, describes, and lists artifacts moved by the content swarm (SPEC v0.1.23 §8); a `ModelRequest` whose media exceeds `agentspaces.content.escalate-above` travels as an artifact on its own. |
 
 Each feature has its own auto-configuration and its own `enabled` property;
 F1 and the take-lease advisor are on by default, and every feature that widens
@@ -565,8 +565,8 @@ agentspaces:
 | `tools.refresh-interval`, `tools.cache-ttl` | `5s`, `1s` | Change-event cadence and snapshot caching |
 | `discovery-tools.agents`, `.assets`, `.data` | `false` | Enable each discovery tool |
 | `discovery-tools.data-space`, `.timeout`, `.max-result-chars` | `data`, `10s`, `20000` | Data space, query timeout, result cap |
-| `capability-tools.vote`, `.aggregate` | `false` | Enable the vote tools (`propose_vote`, `cast_ballot`, `read_tally`, `read_decision`) and the aggregate tools (`contribute`, `read_estimate`) |
-| `capability-tools.ballot-lease`, `.settle-timeout` | `1h`, `10s` | The lease of proposals and ballots the tools write; how long `read_estimate` waits for the estimate to settle |
+| `capability-tools.vote`, `.aggregate`, `.content` | `false` | Enable the vote tools (`propose_vote`, `cast_ballot`, `read_tally`, `read_decision`), the aggregate tools (`contribute`, `read_estimate`), and the content swarm tools (`publish_content`, `fetch_content`, `read_content`, `describe_content`, `list_content`; the starter's `agentspaces.content.enabled` must build the swarm) |
+| `capability-tools.ballot-lease`, `.settle-timeout`, `.fetch-timeout` | `1h`, `10s`, `10m` | The lease of proposals and ballots the tools write; how long `read_estimate` waits for the estimate to settle; how long `fetch_content` waits for an artifact |
 | `take-lease.enabled`, `take-lease.stream-renew-interval` | `true`, `30s` | The lease advisor |
 | `memory.enabled`, `.space`, `.ttl`, `.conversation-id`, `.max-messages` | `false`, `conversations`, `24h`, `take`, `20` | Chat memory in the space |
 | `model-client.enabled`, `.space`, `.model`, `.timeout`, `.stream.on-restart` | `false`, `model-requests`, server default, `120s`, `fail` | The calling side of F4 |
