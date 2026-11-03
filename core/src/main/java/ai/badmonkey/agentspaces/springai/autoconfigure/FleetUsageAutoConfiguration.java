@@ -15,7 +15,6 @@
  */
 package ai.badmonkey.agentspaces.springai.autoconfigure;
 
-import ai.badmonkey.agentspaces.capabilities.aggregate.PushSumAggregate;
 import ai.badmonkey.agentspaces.springai.FleetContext;
 import ai.badmonkey.agentspaces.springai.FleetTaskScheduler;
 import ai.badmonkey.agentspaces.springai.usage.FleetUsage;
@@ -36,9 +35,11 @@ import java.time.Clock;
 /**
  * F6: fleet-wide token usage. An {@code ObservationHandler} bean (which Spring
  * Boot adds to the {@code ObservationRegistry}) feeds the {@link UsageSink}; the
- * default sink, {@link FleetUsage}, keeps local counts, joins push-sum SUM
- * epochs on an interval, and optionally writes attributed usage entries; and
- * {@link UsagePanel} shows it all in the fleet console.
+ * default sink, {@link FleetUsage}, keeps local counts, republishes one per-peer
+ * total per model into the metrics space on an interval (under a lease of three
+ * intervals, ten seconds at least), and optionally writes attributed usage
+ * entries; and {@link UsagePanel} shows it all in the fleet console. The fleet
+ * total sums those per-peer totals; a restarted peer's count begins at zero.
  */
 @AutoConfiguration(after = AgentSpacesSpringAiAutoConfiguration.class)
 @ConditionalOnClass(ChatModelObservationContext.class)
@@ -57,9 +58,7 @@ public class FleetUsageAutoConfiguration {
     @ConditionalOnMissingBean(UsageSink.class)
     public FleetUsage fleetUsage(FleetContext fleet, AgentSpacesSpringAiProperties properties) {
         AgentSpacesSpringAiProperties.Usage usage = properties.usage();
-        PushSumAggregate aggregate = fleet.group().provider(PushSumAggregate.TYPE)
-                .filter(PushSumAggregate.class::isInstance).map(PushSumAggregate.class::cast).orElse(null);
-        return new FleetUsage(aggregate,
+        return new FleetUsage(
                 usage.metricsSpace().isBlank() ? null
                         : fleet.requiredSpace(usage.metricsSpace(), "agentspaces.springai.usage.metrics-space"),
                 usage.entryLease(), usage.publishInterval(), Clock.systemUTC());
@@ -79,7 +78,7 @@ public class FleetUsageAutoConfiguration {
     }
 
     /**
-     * Publishes local totals into the fleet-wide sums.
+     * Republishes this peer's running totals into the metrics space on the publish interval.
      *
      * @param usage      the default sink
      * @param scheduler  the scheduler

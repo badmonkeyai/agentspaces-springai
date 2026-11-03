@@ -61,7 +61,7 @@ class FleetUsageObservationHandlerTest {
     void theDefaultSinkCountsPerModelAndAgentAndWritesEntries() {
         LocalSpace metrics = LocalSpace.builder("metrics", PeerIdentity.generate().agent("host")).build();
         try {
-            FleetUsage usage = new FleetUsage(null, metrics, Duration.ofHours(1), Duration.ofSeconds(30),
+            FleetUsage usage = new FleetUsage(metrics, Duration.ofHours(1), Duration.ofSeconds(30),
                     Clock.systemUTC());
             usage.record(new ModelUsage("m1", "p", 1, 2, 3, "a/x", "peer:z1"));
             usage.record(new ModelUsage("m1", "p", 1, 1, 2, "", "peer:z1"));
@@ -69,7 +69,7 @@ class FleetUsageObservationHandlerTest {
             assertThat(usage.localByModel()).containsEntry("m1", 5L).containsEntry("m2", 10L);
             assertThat(usage.localByAgent()).containsEntry("a/x", 13L).containsEntry("(unattributed)", 2L);
             assertThat(metrics.readAll(Template.of(ModelUsage.class), 10)).hasSize(3);
-            assertThat(usage.fleetTotal("m1")).as("no aggregate, no fleet figure").isEmpty();
+            assertThat(usage.fleetTotal("m1")).as("nothing published, no fleet figure").isEmpty();
             assertThat(new UsagePanel(usage).data().toString()).contains("thisPeerByModel", "m1=5");
         } finally {
             metrics.close();

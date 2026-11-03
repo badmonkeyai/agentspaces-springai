@@ -29,7 +29,7 @@ implementations of Spring AI's own extension points:
 | F3. Crash-safe LLM workers | A take lease that renews on every model round-trip, and `SpaceChatMemoryRepository`, so a reassigned task resumes with its conversation |
 | F4. Model access as a fleet service | `FleetChatModel` implements `ChatModel` over the space, with crash tolerance, routing, media, and streaming; `ModelServer` serves it from the peers that hold the credentials |
 | F5. Real embeddings for semantic discovery | `SpringAiEmbedder` over `EmbeddingModel`, with the embedder advertised on the capability advertisement |
-| F6. Fleet-wide usage | Spring AI's `gen_ai` token usage as fleet aggregates, attributed entries, and a console panel |
+| F6. Fleet-wide usage | Spring AI's `gen_ai` token usage as per-peer totals summed into a fleet total, attributed entries, and a console panel |
 | F7. MCP export | The fleet's tools published through Spring AI's MCP server to any MCP client |
 | F8. Patterns | Documented combinations of existing annotations with Spring AI, plus a `VectorStore` asset provider |
 | F9. Capability tools | `FleetCapabilityTools`: the model opens votes, casts ballots, reads tallies and decisions, and contributes to and reads push-sum estimates, as this peer's agent |
@@ -449,8 +449,11 @@ Both changes sit in the core: the embedder identity on the advertisement in
 process, including calls that bypass `ChatClient`, and it feeds token usage into
 the fleet in three forms:
 
-- a push-sum aggregate per model (`tokens.<model>.input`, `.output`), so any peer
-  can read the fleet's total and average usage with no collector;
+- a per-peer `ModelUsageTotal` per model, republished on `usage.publish-interval`
+  under a lease of three intervals (ten seconds at least), so any peer reads the
+  fleet's total as the sum of one live total per peer, with no collector; a peer
+  that stops publishing leaves the sum when its last total lapses, and a
+  restarted peer's count begins at zero;
 - an optional `ModelUsage` entry per call in a leased `metrics` space, attributed
   to the agent that made the call (from `TakeContext` when a take is in flight),
   for audit;
@@ -604,7 +607,7 @@ the default, with no subclassing and no property flags:
 | `ModelRequestRouter` | by model name (LEASE_RACE), or by price (AUCTION) | route by tenant, region, or load |
 | `StreamChunkingPolicy` | 100 ms or 32 deltas | tune batching for latency or entry count |
 | `StreamRestartPolicy` | `fail` or `restart` | apply a custom recovery, such as resuming with a continuation prompt |
-| `UsageSink` | push-sum aggregates, plus optional `ModelUsage` entries | export usage to a billing or FinOps system |
+| `UsageSink` | per-peer totals summed into a fleet total, plus optional `ModelUsage` entries | export usage to a billing or FinOps system |
 
 Spring AI's own interfaces are the rest of the public API: the project's
 components *are* a `ToolCallbackProvider`, a `ChatMemoryRepository`, a
@@ -846,8 +849,11 @@ stays accurate.
   test runs two Spring applications with no third peer: a member that carries
   no aggregate takes push-sum shares it never mixes back, and the estimate
   settles off the average.
-- **Fleet usage totals** use push-sum SUM epochs named by model and time window,
-  which every peer derives the same way, joined on `usage.publish-interval`.
+- **Fleet usage totals** are per-peer `ModelUsageTotal` entries, one per model,
+  republished on `usage.publish-interval` under a lease of three intervals (ten
+  seconds at least) and summed by the reader, one entry per signed issuer. A
+  peer that stops publishing leaves the sum when its last entry lapses, and a
+  restarted peer's count begins at zero.
 - **The patterns** assemble peers with the core API, like the numbered examples,
   so each multi-peer pattern stays in one file; example 15 shows the Spring Boot
   shape.

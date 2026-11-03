@@ -23,7 +23,8 @@ import java.util.Objects;
 
 /**
  * The fleet console's model-usage panel: this peer's tokens per model and per
- * agent, beside the fleet-wide totals push-sum estimates.
+ * agent, beside the fleet total per model, the sum of one live per-peer total
+ * per issuing peer.
  */
 public class UsagePanel implements ConsolePanel {
 

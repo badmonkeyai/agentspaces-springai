@@ -49,6 +49,17 @@ class FleetUsageAutoConfigurationTest {
     }
 
     @Test
+    void theSinkBuildsWithTheCapabilitiesOff() {
+        FleetApps.runner().withPropertyValues("agentspaces.springai.usage.enabled=true",
+                "agentspaces.capabilities.enabled=false").run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(FleetUsage.class);
+                    assertThat(context.getBean(FleetUsagePublisher.class).isRunning()).isTrue();
+                    assertThat(context).hasSingleBean(UsagePanel.class);
+                });
+    }
+
+    @Test
     void anApplicationSinkReplacesTheDefault() {
         FleetApps.runner().withPropertyValues("agentspaces.springai.usage.enabled=true")
                 .withUserConfiguration(Sink.class).run(context -> {

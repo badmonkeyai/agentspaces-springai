@@ -394,7 +394,8 @@ public record AgentSpacesSpringAiProperties(
      * @param enabled      register the observation handler
      * @param metricsSpace also write a ModelUsage entry per call to this space; empty for none
      * @param entryLease      lease of ModelUsage entries
-     * @param publishInterval how often this peer joins the fleet-wide token sums
+     * @param publishInterval how often this peer republishes its running total per model; the total's
+     *                        lease is three intervals, ten seconds at least
      */
     public record Usage(
             @DefaultValue("false") boolean enabled,

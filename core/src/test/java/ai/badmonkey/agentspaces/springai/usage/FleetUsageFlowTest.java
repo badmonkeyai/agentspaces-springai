@@ -19,6 +19,8 @@ import ai.badmonkey.agentspaces.agent.annotation.AgentSpec;
 import ai.badmonkey.agentspaces.agent.annotation.SpaceTake;
 import ai.badmonkey.agentspaces.api.space.Lease;
 import ai.badmonkey.agentspaces.api.space.Template;
+import ai.badmonkey.agentspaces.capabilities.aggregate.PushSumAggregate;
+import ai.badmonkey.agentspaces.springai.FleetContext;
 import ai.badmonkey.agentspaces.springai.model.wire.ModelUsage;
 import ai.badmonkey.agentspaces.springai.support.FleetApps;
 import ai.badmonkey.agentspaces.springai.support.ObservedChatModel;
@@ -38,6 +40,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.BooleanSupplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +49,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * F6 over TCP: two Spring workers make observed model calls inside
  * {@code @SpaceTake} methods; each call lands in the metrics space attributed
- * to its worker's agent, and push-sum gives every peer the fleet's total.
+ * to its worker's agent, and the per-peer totals each worker republishes give
+ * every peer the fleet's total as their sum.
  */
 class FleetUsageFlowTest {
 
@@ -103,6 +108,13 @@ class FleetUsageFlowTest {
              ConfigurableApplicationContext a = worker(seed);
              ConfigurableApplicationContext b = worker(seed)) {
             Thread.sleep(1500);
+            Set<String> usageEpochs = new CopyOnWriteArraySet<>();
+            PushSumAggregate aggregateA = aggregate(a);
+            PushSumAggregate aggregateB = aggregate(b);
+            aggregateA.onEstimate(id -> id.startsWith("agentspaces.usage."), PushSumAggregate.Settle.FIRST,
+                    estimate -> usageEpochs.add(estimate.epochId()));
+            aggregateB.onEstimate(id -> id.startsWith("agentspaces.usage."), PushSumAggregate.Settle.FIRST,
+                    estimate -> usageEpochs.add(estimate.epochId()));
             for (int i = 0; i < 4; i++) {
                 desk.spaces.get("jobs").write(new Job("job-" + i), Lease.of(Duration.ofMinutes(5)));
             }
@@ -124,12 +136,27 @@ class FleetUsageFlowTest {
                 OptionalDouble total = usageA.fleetTotal("gpt-test");
                 return total.isPresent() && Math.abs(total.getAsDouble() - 480) < 1;
             }, Duration.ofSeconds(40));
-            // The push-sum estimate keeps converging; the panel rounds it, so wait
-            // for the rounded figure rather than read it once (480.6 shows as 481).
+            // The sum of the two per-peer totals is exact, so the panel shows 480 once
+            // both totals have arrived; wait for that rather than read it once.
             await(() -> a.getBean(UsagePanel.class).data().toString().contains("gpt-test=480"),
                     Duration.ofSeconds(20));
             assertThat(a.getBean(UsagePanel.class).data().toString()).contains("fleetByModel");
+
+            // Nothing starts a push-sum epoch for usage any more: no watch fired on
+            // either worker, and no epoch of the old name has an estimate on either.
+            assertThat(usageEpochs).as("push-sum usage epochs seen").isEmpty();
+            long window = System.currentTimeMillis() / Duration.ofSeconds(2).toMillis();
+            for (long w = window - 30; w <= window + 1; w++) {
+                assertThat(aggregateA.estimate("agentspaces.usage.gpt-test." + w)).isEmpty();
+                assertThat(aggregateB.estimate("agentspaces.usage.gpt-test." + w)).isEmpty();
+            }
         }
+    }
+
+    private static PushSumAggregate aggregate(ConfigurableApplicationContext worker) {
+        return worker.getBean(FleetContext.class).group().provider(PushSumAggregate.TYPE)
+                .filter(PushSumAggregate.class::isInstance).map(PushSumAggregate.class::cast)
+                .orElseThrow(() -> new AssertionError("the worker has no push-sum aggregate"));
     }
 
     private static void await(BooleanSupplier condition, Duration timeout) throws InterruptedException {
