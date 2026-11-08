@@ -433,7 +433,7 @@ Spring Boot applications.
 | F6. Fleet-wide usage | `FleetUsageObservationHandler`, `FleetUsage`, `UsagePanel` | Token usage from Spring AI's `gen_ai` observations, as per-peer totals summed into a fleet total, attributed usage entries, and a console panel. Each peer republishes its running total per model on `usage.publish-interval` under a lease of three intervals (ten seconds at least); a peer that stops publishing leaves the sum when its last total lapses, and a restarted peer's count begins at zero. The fleet total is an operational figure; the per-call `ModelUsage` entries are for billing. |
 | F7. MCP export | `FleetMcpToolSync` | The fleet agents a deployment names, published through Spring AI's MCP server and kept in step with `list_changed`. |
 | F8. Patterns | `VectorStoreAssetProvider` (served with `vector-store.enabled=true`); [examples/springai-patterns](examples/springai-patterns/README.md) | A `VectorStore` as a fleet data asset; model judges voting with `@Ballot`; models priced by tokens under AUCTION; an extraction ensemble. |
-| F9. Capability tools | `FleetCapabilityTools` | `propose_vote`, `cast_ballot`, `read_tally`, `read_decision`, `contribute`, and `read_estimate`: the model opens votes, casts ballots, and contributes to fleet-wide averages as this peer's agent, each family enabled separately. With `capability-tools.content` the model also publishes a file as a fleet artifact and fetches, reads, describes, and lists artifacts moved by the content swarm (SPEC v0.1.23 §8); a `ModelRequest` whose media exceeds `agentspaces.content.escalate-above` travels as an artifact on its own. |
+| F9. Capability tools | `FleetCapabilityTools` | `propose_vote`, `cast_ballot`, `read_tally`, `read_decision`, `contribute`, and `read_estimate`: the model opens votes, casts ballots, and contributes to fleet-wide averages as this peer's agent, each family enabled separately. With `capability-tools.content` the model also publishes a file as a fleet artifact and fetches, reads, describes, and lists artifacts moved by the content swarm (SPEC v0.1.23 §8); a `ModelRequest` whose media exceeds `agentspaces.content.escalate-above` travels as an artifact on its own. With `capability-tools.pdt` (and `agentspaces.pdt.enabled`) the model reads a path of a persistent map ref, puts a value at a path as a new version every member merges, and lists the versions: `pdt_read`, `pdt_assoc`, `pdt_history` (srad/agentspaces-pdt.md PD-C-09). |
 
 Each feature has its own auto-configuration and its own `enabled` property;
 F1 and the take-lease advisor are on by default, and every feature that widens
@@ -540,6 +540,7 @@ agentspaces:
     capability-tools:
       vote: true                      # propose_vote, cast_ballot, read_tally, read_decision
       aggregate: false                # contribute, read_estimate
+      pdt: false                      # pdt_read, pdt_assoc, pdt_history (needs agentspaces.pdt.enabled)
     model-client:
       enabled: true                   # this node calls models through the fleet
     model-server:

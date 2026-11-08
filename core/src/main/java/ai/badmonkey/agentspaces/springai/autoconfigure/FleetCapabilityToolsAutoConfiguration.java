@@ -20,6 +20,7 @@ import ai.badmonkey.agentspaces.springai.tools.FleetCapabilityTools;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import ai.badmonkey.agentspaces.spring.Pdts;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -40,7 +41,8 @@ import tools.jackson.databind.json.JsonMapper;
 @ConditionalOnBean(FleetContext.class)
 @ConditionalOnExpression("${agentspaces.springai.capability-tools.vote:false}"
         + " or ${agentspaces.springai.capability-tools.aggregate:false}"
-        + " or ${agentspaces.springai.capability-tools.content:false}")
+        + " or ${agentspaces.springai.capability-tools.content:false}"
+        + " or ${agentspaces.springai.capability-tools.pdt:false}")
 public class FleetCapabilityToolsAutoConfiguration {
 
     /**
@@ -49,16 +51,28 @@ public class FleetCapabilityToolsAutoConfiguration {
      * @param fleet      the fleet context
      * @param properties the properties
      * @param json       the application's JSON mapper, if any
+     * @param pdts       the starter's persistent-tree holder, present when {@code agentspaces.pdt.enabled}
+     *                   built one (srad/agentspaces-pdt.md PD-C-02); the pdt tools resolve the fleet
+     *                   group's facade from it when first used
      * @return the tools
      */
     @Bean
     @ConditionalOnMissingBean
     public FleetCapabilityTools fleetCapabilityTools(FleetContext fleet,
                                                      AgentSpacesSpringAiProperties properties,
-                                                     ObjectProvider<JsonMapper> json) {
+                                                     ObjectProvider<JsonMapper> json,
+                                                     ObjectProvider<Pdts> pdts) {
         AgentSpacesSpringAiProperties.CapabilityTools config = properties.capabilityTools();
-        return new FleetCapabilityTools(fleet, config.vote(), config.aggregate(), config.content(),
+        return new FleetCapabilityTools(fleet, config.vote(), config.aggregate(), config.content(), config.pdt(),
                 config.ballotLease(), config.settleTimeout(), config.fetchTimeout(),
-                json.getIfAvailable(JsonMapper::new));
+                json.getIfAvailable(JsonMapper::new),
+                () -> {
+                    Pdts holder = pdts.getIfAvailable();
+                    if (holder == null) {
+                        throw new IllegalStateException("the persistent trees are not enabled (agentspaces.pdt.enabled=true,"
+                                + " with agentspaces.content.enabled=true)");
+                    }
+                    return holder.forGroup(fleet.groupName());
+                });
     }
 }

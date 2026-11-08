@@ -157,13 +157,19 @@ public record AgentSpacesSpringAiProperties(
      * @param vote          register {@code propose_vote}, {@code cast_ballot},
      *                      {@code read_tally}, and {@code read_decision}
      * @param aggregate     register {@code contribute} and {@code read_estimate}
+     * @param content       register {@code publish_content}, {@code fetch_content}, {@code read_content},
+     *                      {@code describe_content}, and {@code list_content} ({@code agentspaces.content.enabled})
+     * @param pdt           register {@code pdt_read}, {@code pdt_assoc}, and {@code pdt_history} over the
+     *                      persistent trees ({@code agentspaces.pdt.enabled}; srad/agentspaces-pdt.md PD-C-09)
      * @param ballotLease   the lease of the proposals and ballots the tools write
      * @param settleTimeout how long {@code read_estimate} waits for an estimate to settle
+     * @param fetchTimeout  how long {@code fetch_content} waits for an artifact
      */
     public record CapabilityTools(
             @DefaultValue("false") boolean vote,
             @DefaultValue("false") boolean aggregate,
             @DefaultValue("false") boolean content,
+            @DefaultValue("false") boolean pdt,
             @DefaultValue("1h") Duration ballotLease,
             @DefaultValue("10s") Duration settleTimeout,
             @DefaultValue("10m") Duration fetchTimeout) {
@@ -176,13 +182,13 @@ public record AgentSpacesSpringAiProperties(
         }
 
         static CapabilityTools defaults() {
-            return new CapabilityTools(false, false, false, Duration.ofHours(1), Duration.ofSeconds(10),
+            return new CapabilityTools(false, false, false, false, Duration.ofHours(1), Duration.ofSeconds(10),
                     Duration.ofMinutes(10));
         }
 
         /** Whether any family is on. */
         public boolean any() {
-            return vote || aggregate || content;
+            return vote || aggregate || content || pdt;
         }
     }
 
