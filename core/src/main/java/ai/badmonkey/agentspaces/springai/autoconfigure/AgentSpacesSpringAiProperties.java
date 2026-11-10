@@ -160,7 +160,9 @@ public record AgentSpacesSpringAiProperties(
      * @param content       register {@code publish_content}, {@code fetch_content}, {@code read_content},
      *                      {@code describe_content}, and {@code list_content} ({@code agentspaces.content.enabled})
      * @param pdt           register {@code pdt_read}, {@code pdt_assoc}, and {@code pdt_history} over the
-     *                      persistent trees ({@code agentspaces.pdt.enabled}; srad/agentspaces-pdt.md PD-C-09)
+     *                      persistent trees ({@code agentspaces.pdt.enabled}; srad/agentspaces-pdt.md PD-C-09),
+     *                      and {@code pdt_pin} and {@code pdt_store_status} on the content stores (PDT 2 phase 7,
+     *                      P2-C-04)
      * @param ballotLease   the lease of the proposals and ballots the tools write
      * @param settleTimeout how long {@code read_estimate} waits for an estimate to settle
      * @param fetchTimeout  how long {@code fetch_content} waits for an artifact
