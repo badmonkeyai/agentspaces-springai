@@ -38,8 +38,7 @@ mvn -f agentspaces/pom.xml install -DskipTests
 mvn verify
 ```
 
-The tests run against stub models and need no API key. The one live-model test
-is skipped by default.
+The tests run against stub models and need no API key.
 
 The example applications build only under `-Pexamples`. CI builds them, so run
 `mvn verify -Pexamples` before a change that could affect them.

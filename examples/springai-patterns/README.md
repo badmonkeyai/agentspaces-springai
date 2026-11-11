@@ -15,7 +15,7 @@ Under Spring Boot each agent is a `@SpaceAgent` bean with an injected
 [JudgePanel.java](src/main/java/ai/badmonkey/agentspaces/examples/springai/patterns/JudgePanel.java).
 A `Claim` written to the votes space is the cue: the lead's `@SpaceNotify`
 method returns a `Motion`, and the binder opens the vote as the lead, once per
-claim id (ISSUE-Motion, 0.3.0). Each judge is a `@Ballot` agent whose vote comes
+claim id (since 0.3.0). Each judge is a `@Ballot` agent whose vote comes
 from Spring AI's `FactCheckingEvaluator` over the judge's own model, checking
 the claim against its evidence. The lead's `@OnDecision` method records the
 verdict when the quorum closes. Every ballot is a signed entry, so which judge

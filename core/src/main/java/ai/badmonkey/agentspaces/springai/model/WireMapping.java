@@ -170,6 +170,23 @@ public final class WireMapping {
         return builder.build();
     }
 
+    /**
+     * The request's options in the provider's own options type. In Spring AI 2.0 a provider model such as
+     * {@code OpenAiChatModel} reads only its own options class, so the server lays the request's options over the
+     * provider's defaults, as a {@code ChatClient} does. A model whose defaults carry no tools (a plain
+     * {@code ChatModel}) keeps the request's options as they are, so its tool definitions survive.
+     *
+     * @param defaults the provider model's default options
+     * @param request  the options rebuilt from the wire
+     * @return the options to call the provider with
+     */
+    public static ChatOptions forProvider(ChatOptions defaults, ToolCallingChatOptions request) {
+        if (defaults != null && defaults.mutate() instanceof ToolCallingChatOptions.Builder<?> own) {
+            return own.combineWith(request.mutate()).build();
+        }
+        return request;
+    }
+
     /** A tool known by its definition only: the caller runs it, never the server. */
     public record DefinitionOnlyToolCallback(WireToolDefinition wire) implements ToolCallback {
         @Override

@@ -942,10 +942,13 @@ the plan unmet. All five are now closed:
   `TestObservationRegistry`, and that a stopped `ModelServer` takes no requests.
 - A conversation larger than the 64 KiB inline limit round-trips through
   `SpaceChatMemoryRepository`, content-addressed.
-- Opt-in live-model tests, skipped unless `AGENTSPACES_LIVE_MODELS=1` and
-  `OPENAI_API_KEY` are set: `LiveModelServiceTest` serves a real OpenAI model
-  through `ModelServer` and calls it through `FleetChatModel`, blocking and
-  streamed, and Party Bus's `LiveSourcesLiveTest` fills a record from a real model.
+- No test calls a hosted model or needs a key. `OpenAiClientModelServiceTest`
+  serves Spring AI's real OpenAI client through `ModelServer` and calls it
+  through `FleetChatModel`, blocking and streamed, against a local stand-in
+  for the chat completions API. Party Bus's `LiveSourcesOpenAiClientTest`
+  fills a record through the same client and stand-in. `ModelServer` lays the
+  request's options over the provider's own defaults, because a Spring AI 2.0
+  provider model reads only its own options class.
 
 The audit also hardened `CrashSafeWorkerFlowTest`. Spring AI hands a tool's
 exception back to the model as a tool result, so a worker interrupted by its

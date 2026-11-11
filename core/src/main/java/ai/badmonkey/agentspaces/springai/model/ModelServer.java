@@ -199,8 +199,8 @@ public class ModelServer implements SmartLifecycle {
                 answer(taken, failure(request, model, attempt, "model '" + model + "' is not served by " + servedBy));
                 return;
             }
-            Prompt prompt = new Prompt(WireMapping.fromWire(request.messages()),
-                    WireMapping.fromWire(request.options(), model, request.tools()));
+            Prompt prompt = new Prompt(WireMapping.fromWire(request.messages()), WireMapping.forProvider(
+                    chat.get().getOptions(), WireMapping.fromWire(request.options(), model, request.tools())));
             if (request.stream()) {
                 stream(taken, request, model, attempt, chat.get(), prompt);
             } else {

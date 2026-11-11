@@ -154,7 +154,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <!-- Only the opt-in live-model tests (AGENTSPACES_LIVE_MODELS=1) call it. -->
+      <!-- OpenAiClientModelServiceTest serves this client's model against a local stand-in for the API. -->
       <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-openai</artifactId>
       <scope>test</scope>
