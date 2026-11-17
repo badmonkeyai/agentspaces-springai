@@ -305,8 +305,9 @@ propagation carries it onto those threads (section 7.1).
 
 **`TakeLeaseAdvisor`.** A `CallAdvisor` and `StreamAdvisor`, ordered after
 `ToolCallingAdvisor` so it runs inside the tool loop, once per model round-trip.
-On each pass it renews the current take lease by the binding's lease duration
-through `TakenEntry.renew(Duration)`. A streaming round-trip also renews at a
+On each pass it renews the current take lease to the binding's lease duration
+from now through `TakenEntry.renew(Duration)`, which never shortens a lease
+(SPEC §7.2), so a renewal can only keep or extend the claim. A streaming round-trip also renews at a
 fixed interval while chunks arrive. A worker that is making progress keeps its
 claim; a worker that crashes or hangs stops renewing, and its task reappears one
 lease later. Leases can then be short (two minutes), which makes recovery fast.
