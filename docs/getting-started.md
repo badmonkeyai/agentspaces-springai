@@ -90,7 +90,7 @@ calls agents on other peers from its own tool loop:
 ```java
 @Bean
 Orchestrator orchestrator(ChatClient.Builder builder, FleetTools fleet) {
-    return new Orchestrator(builder.defaultToolCallbacks(fleet.toolCallbacks()).build());
+    return new Orchestrator(builder.defaultTools(fleet.toolCallbacks()).build());
 }
 ```
 

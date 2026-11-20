@@ -21,6 +21,7 @@ import ai.badmonkey.agentspaces.springai.support.FakeTake;
 import ai.badmonkey.agentspaces.springai.support.ScriptedChatModel;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.api.MemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
@@ -75,7 +76,7 @@ class FleetChatMemoryAdvisorTest {
         chat.prompt().user("no memory").call().content();
         assertThat(memory.get("anything")).isEmpty();
 
-        chat.prompt().user("mine").advisors(a -> a.param(ChatMemory.CONVERSATION_ID, "user-9")).call().content();
+        chat.prompt().user("mine").advisors(a -> a.param(MemoryAdvisor.CONVERSATION_ID, "user-9")).call().content();
         assertThat(memory.get("user-9")).extracting(Message::getText).containsExactly("mine", "ok");
     }
 }

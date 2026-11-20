@@ -186,7 +186,7 @@ class ModelServiceFlowTest {
     void toolCallsComeBackAndRunOnTheCallerWithTheCallersTools() {
         int before = LOCAL_TOOL_CALLS.get();
         String answer = chat().prompt().user("tool please")
-                .toolCallbacks(FunctionToolCallback.builder("local_lookup", (Lookup in) -> {
+                .tools(FunctionToolCallback.builder("local_lookup", (Lookup in) -> {
                     LOCAL_TOOL_CALLS.incrementAndGet();
                     return "found " + in.q();
                 }).description("looks up locally").inputType(Lookup.class).build())
@@ -245,7 +245,7 @@ class ModelServiceFlowTest {
     void aStreamedToolCallRunsInTheCallersStreamingToolLoop() {
         int before = LOCAL_TOOL_CALLS.get();
         String text = String.join("", chat().prompt().user("stream a tool")
-                .toolCallbacks(FunctionToolCallback.builder("local_lookup", (Lookup in) -> {
+                .tools(FunctionToolCallback.builder("local_lookup", (Lookup in) -> {
                     LOCAL_TOOL_CALLS.incrementAndGet();
                     return "found " + in.q();
                 }).description("looks up locally").inputType(Lookup.class).build())

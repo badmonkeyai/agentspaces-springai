@@ -232,7 +232,7 @@ space), and correlates results.
 ```java
 @Bean
 ChatClient orchestrator(ChatClient.Builder builder, FleetTools fleet) {
-    return builder.defaultToolCallbacks(fleet.toolCallbacks()).build();
+    return builder.defaultTools(fleet.toolCallbacks()).build();
 }
 // the model now sees tools such as fleet_summarizer_SummaryTask and
 // fleet_translator_TranslateTask, and calls them like any other tool
@@ -349,7 +349,7 @@ provider credentials and serves those requests with their real `ChatModel`s.
 
 ```java
 // caller: no API key, no provider dependency
-ChatClient chat = ChatClient.builder(fleetChatModel).defaultToolCallbacks(localTools).build();
+ChatClient chat = ChatClient.builder(fleetChatModel).defaultTools(localTools).build();
 Flux<String> answer = chat.prompt().user("Plan the offsite").stream().content();
 ```
 

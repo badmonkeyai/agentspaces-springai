@@ -98,7 +98,7 @@ class FleetToolsFlowTest {
 
         @Bean
         ChatClient orchestrator(ScriptedChatModel model, FleetTools fleet) {
-            return ChatClient.builder(model).defaultToolCallbacks(fleet.toolCallbacks()).build();
+            return ChatClient.builder(model).defaultTools(fleet.toolCallbacks()).build();
         }
 
         @EventListener

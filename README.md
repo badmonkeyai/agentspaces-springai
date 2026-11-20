@@ -114,7 +114,7 @@ The [documents](docs/README.md) add the rest: fleet tools for an orchestrator's 
 - Agents are annotated methods on beans; the space hands each one its work under a lease, and a crashed peer's work comes back.
 - Model access as a fleet service: one peer holds the key, every other peer calls `ChatClient`.
 - The fleet's agents and capabilities as Spring AI tools and over MCP.
-- Java 21, Spring Boot 4.1, Spring AI 2.0.
+- Java 21, Spring Boot 4.1, Spring AI 2.1 (2.1.0-RC2 on the 0.7.0 line; 2.1.0 GA before 1.0.0).
 
 ## Add it to your build
 

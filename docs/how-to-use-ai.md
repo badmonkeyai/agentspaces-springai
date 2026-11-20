@@ -40,7 +40,7 @@ public static class Orchestrator {
     private final ChatClient chat;
 
     Orchestrator(ChatClient.Builder builder, FleetTools fleet) {
-        this.chat = builder.defaultToolCallbacks(fleet.toolCallbacks()).build();
+        this.chat = builder.defaultTools(fleet.toolCallbacks()).build();
     }
 
     public String ask(String question) {
@@ -87,7 +87,7 @@ public static class Planner {
     private final String name;
 
     Planner(ChatClient.Builder builder, List<ToolCallback> tools, String name) {
-        this.chat = builder.defaultToolCallbacks(tools).build();
+        this.chat = builder.defaultTools(tools).build();
         this.name = name;
     }
 

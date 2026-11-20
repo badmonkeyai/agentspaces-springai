@@ -47,7 +47,7 @@ class ChatClientToolResolutionTest {
                 event -> { }, Clock.systemUTC());
         ScriptedChatModel model = ScriptedChatModel.callingTools(List.of(new AssistantMessage.ToolCall(
                 "call-1", "function", "fleet_summarizer_Brief", "{\"topic\":\"leases\",\"words\":10}")));
-        ChatClient chat = ChatClient.builder(model).defaultToolCallbacks(provider).build();
+        ChatClient chat = ChatClient.builder(model).defaultTools(provider).build();
 
         fleet.add(FakeAction.summarizer());
         String answer = chat.prompt().user("summarize leases").call().content();

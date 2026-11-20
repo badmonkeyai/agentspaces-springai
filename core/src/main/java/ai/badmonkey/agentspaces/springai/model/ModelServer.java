@@ -258,6 +258,17 @@ public class ModelServer implements SmartLifecycle {
         return new ModelResponse(request.requestId(), model, List.of(), null, error, servedBy, attempt);
     }
 
+    /** A delta with no text, tool call, media, or finish reason: nothing a caller can use. */
+    static boolean empty(WireGeneration generation) {
+        if (generation.finishReason() != null) {
+            return false;
+        }
+        WireMessage output = generation.output();
+        return output == null || ((output.text() == null || output.text().isEmpty())
+                && (output.toolCalls() == null || output.toolCalls().isEmpty())
+                && (output.media() == null || output.media().isEmpty()));
+    }
+
     private int nextAttempt(String requestId) {
         return space.readAll(Template.of(ModelAttempt.class).where("requestId", eq(requestId)), 100).stream()
                 .mapToInt(ModelAttempt::attempt).max().orElse(0) + 1;
@@ -289,6 +300,11 @@ public class ModelServer implements SmartLifecycle {
 
         synchronized void add(ChatResponse response) {
             for (WireGeneration generation : WireMapping.generations(response)) {
+                if (empty(generation)) {
+                    // Spring AI 2.1 streams reasoning-only chunks and partial tool-call parts;
+                    // neither maps to the wire yet, so they would arrive as empty deltas.
+                    continue;
+                }
                 buffer.add(generation);
                 WireMessage output = generation.output();
                 if (output != null) {

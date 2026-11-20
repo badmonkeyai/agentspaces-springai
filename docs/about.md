@@ -20,6 +20,6 @@ repository) integrates at the level of a planned agent and its actions; this
 project integrates at the level of a model call and its tools. An application
 can use either or both.
 
-Requirements: Java 21, Spring Boot 4.1, Spring AI 2.0, and the AgentSpaces
+Requirements: Java 21, Spring Boot 4.1, Spring AI 2.1 (2.1.0-RC2), and the AgentSpaces
 starter (`agentspaces-spring-boot-starter`). The design and its rationale are in
 [`docs/design.md`](../docs/design.md).

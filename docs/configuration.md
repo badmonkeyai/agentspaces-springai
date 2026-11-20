@@ -65,3 +65,10 @@ agentspaces:
 | `usage.enabled`, `.metrics-space`, `.entry-lease`, `.publish-interval` | `false`, none, `24h`, `30s` | F6 |
 | `mcp.enabled`, `.include-agents`, `.discovery-tools`, `.capability-tools` | `false`, none, `false`, `false` | F7; the last two also export the enabled F2 and F9 tools |
 | `vector-store.enabled`, `.space`, `.asset`, `.description`, `.freshness` | `false`, `data`, `knowledge-base`, a generic description, `5m` | F8: serve the application's `VectorStore` bean as a fleet data asset |
+
+## Spring AI 2.1 notes
+
+- **Attach fleet tools with `defaultTools(...)`.** `ChatClient.Builder.defaultToolCallbacks(...)` and `ChatClientRequestSpec.toolCallbacks(...)` are deprecated for removal in Spring AI 3.0. `defaultTools(fleet.toolCallbacks())` takes the same provider and still reads it on every request.
+- **Sampling options and Anthropic.** The model server passes a caller's `temperature`, `topP` and `topK` to the provider. Spring AI 2.1's Anthropic model drops all three and logs a `WARN`, because the Anthropic SDK 3.x rejects them. Other providers are unchanged.
+- **Stream deltas.** Providers now stream reasoning and partial tool-call parts. The model server does not forward a delta that has no text, no complete tool call, no media and no finish reason, so callers see the same chunks as on 2.0.
+- **Tool call limits.** Every `ChatClient` stops a tool loop at 40 calls to one tool or 150 in total. Fleet tools count like any other tool. Raise the caps with `spring.ai.tools.limits.*`.

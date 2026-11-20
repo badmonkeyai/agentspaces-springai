@@ -77,7 +77,7 @@ class CrashSafeWorkerFlowTest {
         private final String name;
 
         Planner(ChatClient.Builder builder, List<ToolCallback> tools, String name) {
-            this.chat = builder.defaultToolCallbacks(tools).build();
+            this.chat = builder.defaultTools(tools).build();
             this.name = name;
         }
 

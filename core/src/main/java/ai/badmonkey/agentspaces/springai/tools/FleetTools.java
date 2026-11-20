@@ -26,7 +26,7 @@ import java.util.Objects;
  * {@code ChatClient} explicitly:
  *
  * <pre>{@code
- * ChatClient chat = builder.defaultToolCallbacks(fleetTools.toolCallbacks()).build();
+ * ChatClient chat = builder.defaultTools(fleetTools.toolCallbacks()).build();
  * }</pre>
  *
  * <p>This bean is deliberately not a {@link ToolCallbackProvider} itself. Spring

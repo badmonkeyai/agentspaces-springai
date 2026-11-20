@@ -66,7 +66,7 @@ class TakeLeaseAdvisorTest {
         TakeLeaseAdvisor advisor = new TakeLeaseAdvisor(scheduler, Duration.ofSeconds(30),
                 () -> Optional.of(context));
         ChatClient chat = ChatClient.builder(threeToolRounds()).defaultAdvisors(advisor)
-                .defaultToolCallbacks(FunctionToolCallback.builder("local_step", (Step s) -> "ok " + s.n())
+                .defaultTools(FunctionToolCallback.builder("local_step", (Step s) -> "ok " + s.n())
                         .description("one step").inputType(Step.class).build())
                 .build();
 

@@ -117,7 +117,7 @@ public final class SpringAiFleet {
         private final ChatClient chat;
 
         Orchestrator(ChatClient.Builder builder, FleetTools fleet) {
-            this.chat = builder.defaultToolCallbacks(fleet.toolCallbacks()).build();
+            this.chat = builder.defaultTools(fleet.toolCallbacks()).build();
         }
 
         /**

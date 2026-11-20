@@ -36,7 +36,7 @@ import java.util.function.Supplier;
 
 /**
  * The fleet's AgentCards as Spring AI tools. Attach it to a {@code ChatClient}
- * ({@code builder.defaultToolCallbacks(provider)}) and the model's tool loop can
+ * ({@code builder.defaultTools(provider)}) and the model's tool loop can
  * call agents anywhere on the peer-to-peer fleet.
  *
  * <p>The tool set is live: each request sees a snapshot of the actions the

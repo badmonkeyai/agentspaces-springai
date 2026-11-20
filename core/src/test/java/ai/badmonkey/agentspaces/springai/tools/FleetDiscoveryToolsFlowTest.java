@@ -105,7 +105,7 @@ class FleetDiscoveryToolsFlowTest {
         @Bean
         ChatClient chat(ScriptedChatModel model, FleetTools fleet, FleetDiscoveryTools discovery) {
             return ChatClient.builder(model)
-                    .defaultToolCallbacks(fleet.toolCallbacks(), discovery.toolCallbacks()).build();
+                    .defaultTools(fleet.toolCallbacks(), discovery.toolCallbacks()).build();
         }
     }
 

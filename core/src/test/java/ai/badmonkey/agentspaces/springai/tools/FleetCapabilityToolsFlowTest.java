@@ -60,7 +60,7 @@ class FleetCapabilityToolsFlowTest {
 
         @Bean
         ChatClient chat(ScriptedChatModel model, FleetCapabilityTools capability) {
-            return ChatClient.builder(model).defaultToolCallbacks(capability.toolCallbacks()).build();
+            return ChatClient.builder(model).defaultTools(capability.toolCallbacks()).build();
         }
     }
 

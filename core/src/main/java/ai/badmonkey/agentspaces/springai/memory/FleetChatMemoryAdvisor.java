@@ -20,6 +20,7 @@ import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
+import org.springframework.ai.chat.client.advisor.api.MemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.StreamAdvisor;
 import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -30,7 +31,7 @@ import java.util.Optional;
 
 /**
  * Spring AI's {@link MessageChatMemoryAdvisor}, with the conversation ID filled
- * in. A call that names its conversation ({@code ChatMemory.CONVERSATION_ID})
+ * in. A call that names its conversation ({@code MemoryAdvisor.CONVERSATION_ID})
  * keeps it; otherwise the {@link ConversationIdResolver} chooses one, and a call
  * the resolver cannot place passes through without memory instead of failing.
  * Worker code therefore never threads a conversation ID through its methods.
@@ -74,9 +75,9 @@ public class FleetChatMemoryAdvisor implements CallAdvisor, StreamAdvisor {
     }
 
     private Optional<ChatClientRequest> placed(ChatClientRequest request) {
-        if (request.context().get(ChatMemory.CONVERSATION_ID) != null) {
+        if (request.context().get(MemoryAdvisor.CONVERSATION_ID) != null) {
             return Optional.of(request);
         }
-        return resolver.resolve().map(id -> request.mutate().context(ChatMemory.CONVERSATION_ID, id).build());
+        return resolver.resolve().map(id -> request.mutate().context(MemoryAdvisor.CONVERSATION_ID, id).build());
     }
 }

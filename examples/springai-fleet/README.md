@@ -46,7 +46,7 @@ The orchestrator:
 
 ```java
 Orchestrator(ChatClient.Builder builder, FleetTools fleet) {
-    this.chat = builder.defaultToolCallbacks(fleet.toolCallbacks()).build();
+    this.chat = builder.defaultTools(fleet.toolCallbacks()).build();
 }
 
 public String ask(String question) {

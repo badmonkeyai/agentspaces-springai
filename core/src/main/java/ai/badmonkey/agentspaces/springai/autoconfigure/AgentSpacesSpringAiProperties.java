@@ -220,7 +220,7 @@ public record AgentSpacesSpringAiProperties(
         TAKE,
         /** The bound agent's ID: one long-running memory per agent. */
         AGENT,
-        /** The caller always passes {@code ChatMemory.CONVERSATION_ID}. */
+        /** The caller always passes {@code MemoryAdvisor.CONVERSATION_ID}. */
         EXPLICIT
     }
 
