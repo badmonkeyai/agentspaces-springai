@@ -31,7 +31,6 @@ import ai.badmonkey.agentspaces.peering.transport.TcpTransport;
 import ai.badmonkey.agentspaces.space.replicated.ReplicatedSpace;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -65,12 +64,9 @@ public final class TestPeer implements AutoCloseable {
         this.binder = binder;
     }
 
+    /** A free loopback port from the shared allocator, which never hands one port out twice in a run (§10.5). */
     public static int freePort() {
-        try (ServerSocket socket = new ServerSocket(0, 50, java.net.InetAddress.getLoopbackAddress())) {
-            return socket.getLocalPort();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        return ai.badmonkey.agentspaces.test.Ports.free();
     }
 
     /**

@@ -246,7 +246,7 @@ class AnnotationPassthroughTest {
     /** {@code @OnEstimate} fires once the epoch settles. */
     @SpaceAgent(name = "supervisor", description = "Reports the settled fleet load")
     public static class Supervisor {
-        @OnEstimate(prefix = "load:", settleTicks = 10, tolerance = 0.01, resultSpace = "results")
+        @OnEstimate(prefix = "load:", settle = "PT10S", tolerance = 0.01, resultSpace = "results")
         public Settled settled(PushSumAggregate.Estimate estimate) {
             return new Settled(estimate.epochId(), estimate.value());
         }

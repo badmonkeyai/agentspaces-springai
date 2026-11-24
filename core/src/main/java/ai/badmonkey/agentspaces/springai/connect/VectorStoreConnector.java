@@ -61,6 +61,15 @@ public class VectorStoreConnector implements SmartLifecycle {
         }
     }
 
+    /**
+     * The running connector, or null before start and after stop.
+     *
+     * @return the runtime
+     */
+    public synchronized ConnectorRuntime runtime() {
+        return runtime;
+    }
+
     @Override
     public synchronized boolean isRunning() {
         return runtime != null;

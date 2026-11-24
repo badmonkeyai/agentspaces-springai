@@ -72,20 +72,26 @@ public class FleetVectorStoreAutoConfiguration {
      * @param fleet      the fleet context
      * @param provider   the asset provider
      * @param properties the properties
+     * @param core       the starter's properties: {@code agentspaces.watchdog.connector-hold-limit} (§10.35)
      * @return the connector
      */
     @Bean
     @ConditionalOnMissingBean
     public VectorStoreConnector vectorStoreConnector(FleetContext fleet, VectorStoreAssetProvider provider,
-                                                     AgentSpacesSpringAiProperties properties) {
+                                                     AgentSpacesSpringAiProperties properties,
+                                                     org.springframework.beans.factory.ObjectProvider<
+                                                             ai.badmonkey.agentspaces.spring.AgentSpacesProperties> core) {
         AgentSpacesSpringAiProperties.VectorStore config = properties.vectorStore();
         // Resolve the space now, so a missing one fails at startup with the property's name.
         var space = fleet.requiredSpace(config.space(), "agentspaces.springai.vector-store.space");
+        ai.badmonkey.agentspaces.spring.AgentSpacesProperties starter = core.getIfAvailable();
+        java.time.Duration holdLimit = starter == null ? null : starter.getWatchdog().getConnectorHoldLimit();
         return new VectorStoreConnector(() -> {
             AgentSpaces.GroupContext group = fleet.group();
             return new ConnectorRuntime(space, group.discovery(), fleet.identity(),
                     config.asset() + "-connector", provider, group.id(), group.clock(), config.freshness())
-                    .authorizer(fleet.authorizer());
+                    .authorizer(fleet.authorizer())
+                    .holdLimit(holdLimit); // §10.16, §10.35; unset: no limit
         });
     }
 }

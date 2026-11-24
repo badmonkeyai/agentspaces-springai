@@ -36,7 +36,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.time.Clock;
 
 /**
  * F1: the fleet's AgentCards as Spring AI tools. Registers {@link FleetTools}
@@ -108,13 +107,14 @@ public class FleetToolsAutoConfiguration {
     public FleetTools fleetTools(
             RemoteActions actions, FleetToolFilter filter, ToolNamingStrategy naming,
             AgentSpacesSpringAiProperties properties, ObjectProvider<JsonMapper> json,
-            ObjectProvider<ObservationRegistry> observations, ApplicationEventPublisher events) {
+            ObjectProvider<ObservationRegistry> observations, ApplicationEventPublisher events,
+            ObjectProvider<java.time.InstantSource> clock) {
         AgentSpacesSpringAiProperties.Tools tools = properties.tools();
         return new FleetTools(new FleetToolCallbackProvider(
                 () -> actions.available().stream().map(FleetAction::of).toList(),
                 filter, naming, json.getIfAvailable(JsonMapper::new), tools.timeout(),
                 tools.onTimeout(), observations.getIfAvailable(() -> ObservationRegistry.NOOP),
-                tools.cacheTtl(), events::publishEvent, Clock.systemUTC()));
+                tools.cacheTtl(), events::publishEvent, FleetUsageAutoConfiguration.utc(clock)));
     }
 
     /**

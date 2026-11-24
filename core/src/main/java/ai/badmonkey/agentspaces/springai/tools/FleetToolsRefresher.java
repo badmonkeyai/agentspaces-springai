@@ -54,7 +54,7 @@ public class FleetToolsRefresher implements SmartLifecycle {
 
     @Override
     public void start() {
-        task = scheduler.scheduleAtFixedRate(provider::refresh, interval);
+        task = scheduler.scheduleWithFixedDelay(provider::refresh, interval);
     }
 
     @Override

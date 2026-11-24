@@ -59,7 +59,6 @@ public final class FleetApps {
                 "spring.ai.mcp.server.enabled=false",
                 "agentspaces.security.profile=dev-local",
                 "agentspaces.bind=127.0.0.1:" + bindPort,
-                "agentspaces.tick-millis=200",
                 "agentspaces.groups[0].name=test-fleet",
                 "agentspaces.groups[0].founding=" + founding));
         if (seedPort > 0) {

@@ -73,6 +73,23 @@ class FleetVectorStoreAutoConfigurationTest {
                 });
     }
 
+    /** §10.35: the starter's {@code agentspaces.watchdog.connector-hold-limit} reaches the connector it builds. */
+    @Test
+    void theConnectorHoldLimitPropertyReachesTheConnector() {
+        FleetApps.runner("data").withUserConfiguration(Store.class)
+                .withPropertyValues("agentspaces.springai.vector-store.enabled=true",
+                        "agentspaces.watchdog.connector-hold-limit=PT5M")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(VectorStoreConnector.class).runtime().holdLimit())
+                            .isEqualTo(Duration.ofMinutes(5));
+                });
+        FleetApps.runner("data").withUserConfiguration(Store.class)
+                .withPropertyValues("agentspaces.springai.vector-store.enabled=true")
+                .run(context -> assertThat(context.getBean(VectorStoreConnector.class).runtime().holdLimit())
+                        .as("unset: no limit").isNull());
+    }
+
     @Test
     void enabledWithoutAStoreFailsWithTheFix() {
         FleetApps.runner("data").withPropertyValues("agentspaces.springai.vector-store.enabled=true")

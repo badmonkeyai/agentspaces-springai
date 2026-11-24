@@ -45,7 +45,7 @@ public class FleetUsagePublisher implements SmartLifecycle {
 
     @Override
     public void start() {
-        task = scheduler.scheduleAtFixedRate(usage::publish, interval);
+        task = scheduler.scheduleWithFixedDelay(usage::publish, interval);
     }
 
     @Override

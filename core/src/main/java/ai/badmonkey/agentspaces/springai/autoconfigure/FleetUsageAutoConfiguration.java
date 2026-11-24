@@ -31,6 +31,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 import java.time.Clock;
+import java.time.ZoneOffset;
 
 /**
  * F6: fleet-wide token usage. An {@code ObservationHandler} bean (which Spring
@@ -56,12 +57,13 @@ public class FleetUsageAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(UsageSink.class)
-    public FleetUsage fleetUsage(FleetContext fleet, AgentSpacesSpringAiProperties properties) {
+    public FleetUsage fleetUsage(FleetContext fleet, AgentSpacesSpringAiProperties properties,
+                                 org.springframework.beans.factory.ObjectProvider<java.time.InstantSource> clock) {
         AgentSpacesSpringAiProperties.Usage usage = properties.usage();
         return new FleetUsage(
                 usage.metricsSpace().isBlank() ? null
                         : fleet.requiredSpace(usage.metricsSpace(), "agentspaces.springai.usage.metrics-space"),
-                usage.entryLease(), usage.publishInterval(), Clock.systemUTC());
+                usage.entryLease(), usage.publishInterval(), utc(clock));
     }
 
     /**
@@ -104,5 +106,14 @@ public class FleetUsageAutoConfiguration {
     @ConditionalOnMissingBean
     public UsagePanel usagePanel(FleetUsage usage) {
         return new UsagePanel(usage);
+    }
+
+    /**
+     * The context's clock, the starter's one time source (srad/agentspaces-event-loop.md EL-C-06), so usage stamps
+     * read the clock the node runs on ({@code VirtualTime} in a test); the system's UTC clock when there is none.
+     */
+    static Clock utc(org.springframework.beans.factory.ObjectProvider<java.time.InstantSource> clock) {
+        java.time.InstantSource source = clock.getIfUnique();
+        return source == null ? Clock.systemUTC() : source.withZone(ZoneOffset.UTC);
     }
 }

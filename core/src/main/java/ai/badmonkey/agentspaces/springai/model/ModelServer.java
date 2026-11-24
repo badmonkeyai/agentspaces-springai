@@ -186,7 +186,7 @@ public class ModelServer implements SmartLifecycle {
         space.write(new ModelAttempt(request.requestId(), attempt, servedBy), Lease.of(Duration.ofMinutes(10)));
         String model = request.model().isBlank() ? catalog.defaultModel() : request.model();
         Duration renewEvery = settings.lease().dividedBy(3);
-        ScheduledFuture<?> renewer = scheduler.scheduleAtFixedRate(() -> {
+        ScheduledFuture<?> renewer = scheduler.scheduleWithFixedDelay(() -> {
             try {
                 taken.renew(settings.lease());
             } catch (RuntimeException e) {
@@ -228,7 +228,7 @@ public class ModelServer implements SmartLifecycle {
                         writer.cancel();
                     }
                 }, Lease.of(settings.lease().plusMinutes(1)));
-        ScheduledFuture<?> flusher = scheduler.scheduleAtFixedRate(writer::flushIfDue,
+        ScheduledFuture<?> flusher = scheduler.scheduleWithFixedDelay(writer::flushIfDue,
                 Instant.now().plus(chunking.interval()), chunking.interval());
         try {
             writer.disposable = chat.stream(prompt).subscribe(writer::add, writer::fail, writer::finish);

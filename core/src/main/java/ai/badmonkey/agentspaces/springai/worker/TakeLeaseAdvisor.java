@@ -105,7 +105,7 @@ public class TakeLeaseAdvisor implements CallAdvisor, StreamAdvisor {
                 return chain.nextStream(request);
             }
             renew(take);
-            ScheduledFuture<?> ticker = scheduler.scheduleAtFixedRate(() -> renew(take),
+            ScheduledFuture<?> ticker = scheduler.scheduleWithFixedDelay(() -> renew(take),
                     Instant.now().plus(streamRenewInterval), streamRenewInterval);
             return chain.nextStream(request).doFinally(signal -> ticker.cancel(false));
         });
